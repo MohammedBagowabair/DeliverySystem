@@ -17,9 +17,9 @@ namespace Infrastructure.Configurations.Validators
                 .EmailAddress().WithMessage("Email format is invalid.")
                 .MaximumLength(100).WithMessage("Email cannot exceed 100 characters.");
 
-            RuleFor(user => user.Password)
-                .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
+            //RuleFor(user => user.Password)
+            //    .NotEmpty().WithMessage("Password is required.")
+            //    .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
         }
     }
 
