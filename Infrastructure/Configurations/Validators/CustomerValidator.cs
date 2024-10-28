@@ -1,14 +1,20 @@
 ﻿using Domain.Entities;
-using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations.Validators
 {
-    public class CustomerValidator : PersonValidator<Customer>
+    public class CustomerValidator : IEntityTypeConfiguration<Customer>
     {
-        public CustomerValidator()
+        public void Configure(EntityTypeBuilder<Customer> builder)
         {
-            RuleFor(customer => customer.Orders)
-                .NotNull().WithMessage("Orders cannot be null.");
+            builder.HasMany(customer => customer.Orders)
+                          .WithOne(order => order.Customer)
+                          .IsRequired();  // Ensures each Order has an associated Customer
+
+
+            builder.HasMany<Order>(x => x.Orders).WithOne(x => x.Customer).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

@@ -1,28 +1,30 @@
 ﻿using Domain.Entities;
-using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations.Validators
 {
 
-    public class UserValidator : PersonValidator<User>
+    public class UserValidator : IEntityTypeConfiguration<User>
     {
-        public UserValidator()
+
+
+        public void Configure(EntityTypeBuilder<User> builder)
         {
+            // Configure Email property
+            builder.Property(user => user.Email)
+                   .IsRequired()  // Ensures Email is not nullable
+                   .HasMaxLength(100);  // Sets max length to 100 characters
 
-            RuleFor(user => user.Email)
-             .NotEmpty().WithMessage("Email is required.")
-             .EmailAddress().WithMessage("Invalid email format.")
-             .MaximumLength(100).WithMessage("Email cannot exceed 100 characters.");
+            // Configure PasswordHash property
+            builder.Property(user => user.PasswordHash)
+                   .IsRequired()  // Ensures PasswordHash is not nullable
+                   .HasMaxLength(256);  // Sets a max length, assuming a typical hash length (adjust as needed)
 
-            RuleFor(user => user.PasswordHash)
-                .NotEmpty().WithMessage("Password hash is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
-
-            RuleFor(user => user.Role)
-                .NotEmpty().WithMessage("Role is required.")
-                .Must(role => role == "Admin" || role == "Customer").WithMessage("Role must be either 'Admin' or 'Customer'.");
-
-
+            // Configure Role property
+            builder.Property(user => user.Role)
+                   .IsRequired()  // Ensures Role is not nullable
+                   .HasMaxLength(20);  // Set a max length suitable for roles (e.g., 20 characters)
         }
     }
 

@@ -1,31 +1,30 @@
 ﻿using Domain.Entities;
-using FluentValidation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations.Validators
 {
-    public class PersonValidator<T> : AbstractValidator<T> where T : Person
+    public class PersonValidator : IEntityTypeConfiguration<Person>
     {
-        public PersonValidator()
+        public void Configure(EntityTypeBuilder<Person> builder)
         {
-            RuleFor(person => person.FullName)
-                .NotEmpty().WithMessage("Full name is required.")
-                .MaximumLength(50).WithMessage("Full name cannot exceed 50 characters.");
+            // Configure FullName property
+            builder.Property(person => person.FullName)
+                   .IsRequired()  // Ensures it's not nullable
+                   .HasMaxLength(50);  // Sets max length to 50 characters
 
-            RuleFor(person => person.PhoneNumber1)
-                .NotEmpty().WithMessage("Primary phone number is required.")
-                .MaximumLength(15).WithMessage("Phone number cannot exceed 15 characters.");
+            // Configure PhoneNumber1 property
+            builder.Property(person => person.PhoneNumber1)
+                   .IsRequired()  // Ensures it's not nullable
+                   .HasMaxLength(15);  // Sets max length to 15 characters
 
-            RuleFor(person => person.PhoneNumber2)
-                .MaximumLength(15).WithMessage("Secondary phone number cannot exceed 15 characters.")
-                .When(person => !string.IsNullOrEmpty(person.PhoneNumber2));
+            // Configure PhoneNumber2 property
+            builder.Property(person => person.PhoneNumber2)
+                   .HasMaxLength(15);  // Sets max length to 15 characters but nullable by default
 
-            RuleFor(person => person.Address)
-                .NotEmpty().WithMessage("Address is required.");
+            // Configure Address property
+            builder.Property(person => person.Address)
+                   .IsRequired();  // Ensures it's not nullable
         }
     }
 }

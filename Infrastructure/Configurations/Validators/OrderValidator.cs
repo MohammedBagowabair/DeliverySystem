@@ -1,40 +1,61 @@
 ﻿using Domain.Entities;
-using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations.Validators
 {
-    public class OrderValidator : AbstractValidator<Order>
+    public class OrderValidator : IEntityTypeConfiguration<Order>
     {
-        public OrderValidator()
+
+        public void Configure(EntityTypeBuilder<Order> builder)
         {
-            RuleFor(order => order.Customer)
-                .NotNull().WithMessage("Customer is required.")
-                .SetValidator(new CustomerValidator()); // Uses CustomerValidator
+            // Configure Customer property
+            builder.HasOne(order => order.Customer)
+                   .WithMany()
+                   .IsRequired();  // Ensures that a Customer is always associated with an Order
 
-            RuleFor(order => order.Driver)
-                .NotNull().WithMessage("Driver is required.")
-                .SetValidator(new DriverValidator()); // Uses DriverValidator
+            // Configure Driver property
+            builder.HasOne(order => order.Driver)
+                   .WithMany()
+                   .IsRequired();  // Ensures that a Driver is always associated with an Order
 
-            RuleFor(order => order.DeliveryTime)
-                .GreaterThanOrEqualTo(DateTime.Now).WithMessage("Delivery time must be in the future.");
+            // Configure DeliveryTime property
+            builder.Property(order => order.DeliveryTime)
+                   .IsRequired();  // This ensures DeliveryTime is not nullable; future validation is handled by business logic
 
-            RuleFor(order => order.PaymentMethod)
-                .NotEmpty().WithMessage("Payment method is required.");
+            // Configure PaymentMethod property
+            builder.Property(order => order.PaymentMethod)
+                   .IsRequired()
+                   .HasMaxLength(50);  // Setting a reasonable max length for the payment method string
 
-            RuleFor(order => order.DeliveryFee)
-                .InclusiveBetween(0, 100000).WithMessage("Delivery fee must be between 0 and 100000.");
+            // Configure DeliveryFee property
+            builder.Property(order => order.DeliveryFee)
+                   .HasColumnType("decimal(18,2)")  // Adjust precision and scale as needed
+                   .IsRequired();  // Required based on the FluentValidation rule
 
-            RuleFor(order => order.CouponDiscount)
-                .InclusiveBetween(0, 100000).WithMessage("Coupon discount must be between 0 and 100000.");
+            // Configure CouponDiscount property
+            builder.Property(order => order.CouponDiscount)
+                   .HasColumnType("decimal(18,2)")  // Adjust precision and scale as needed
+                   .IsRequired();  // Required based on the FluentValidation rule
 
-            RuleFor(order => order.FinalPrice)
-                .GreaterThanOrEqualTo(0).WithMessage("Final price must be a positive value.");
+            // Configure FinalPrice property
+            builder.Property(order => order.FinalPrice)
+                   .HasColumnType("decimal(18,2)")  // Adjust precision and scale as needed
+                   .IsRequired();  // Ensures FinalPrice is not nullable
 
-            RuleFor(order => order.OrderStatus)
-                .NotEmpty().WithMessage("Order status is required.");
+            // Configure OrderStatus property
+            builder.Property(order => order.OrderStatus)
+                   .IsRequired()
+                   .HasMaxLength(50);  // Assuming a max length for OrderStatus string
 
-            RuleFor(order => order.Notice)
-                .MaximumLength(500).WithMessage("Notice cannot exceed 500 characters.");
+            // Configure Notice property
+            builder.Property(order => order.Notice)
+                   .HasMaxLength(500);  // Limits the length of the Notice to 500 characters
+
+            builder.HasOne<Driver>(x => x.Driver).WithMany(x => x.Orders).HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne<Customer>(x => x.Customer).WithMany(x => x.Orders).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
         }
     }
+
 }

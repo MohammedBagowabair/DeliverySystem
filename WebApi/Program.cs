@@ -1,10 +1,7 @@
-using Microsoft.AspNetCore.Identity;
-using FluentValidation.AspNetCore;
+using Application.Interfaces;
+using Application.Services;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Domain.Entities;
-using FluentValidation;
-using Infrastructure.Configurations.Validators;
 
 
 
@@ -19,13 +16,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
+builder.Services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddTransient<IValidator<User>, UserValidator>();
-builder.Services.AddTransient<IValidator<Customer>, CustomerValidator>();
-builder.Services.AddTransient<IValidator<Driver>, DriverValidator>();
-builder.Services.AddTransient<IValidator<Order>, OrderValidator>();
 
 
 var app = builder.Build();
