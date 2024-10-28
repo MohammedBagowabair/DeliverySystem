@@ -7,17 +7,13 @@ namespace Infrastructure.Configurations.Validators
     {
         public OrderValidator()
         {
-            RuleFor(order => order.CustomerName)
-                .NotEmpty().WithMessage("Customer name is required.")
-                .MaximumLength(50).WithMessage("Customer name cannot exceed 50 characters.");
+            RuleFor(order => order.Customer)
+                .NotNull().WithMessage("Customer is required.")
+                .SetValidator(new CustomerValidator()); // Uses CustomerValidator
 
-            RuleFor(order => order.CustomerPhone)
-                .NotEmpty().WithMessage("Customer phone number is required.")
-                .MaximumLength(15).WithMessage("Customer phone number cannot exceed 15 characters.");
-
-            RuleFor(order => order.DeliveryAddress)
-                .NotEmpty().WithMessage("Delivery address is required.")
-                .MaximumLength(200).WithMessage("Delivery address cannot exceed 200 characters.");
+            RuleFor(order => order.Driver)
+                .NotNull().WithMessage("Driver is required.")
+                .SetValidator(new DriverValidator()); // Uses DriverValidator
 
             RuleFor(order => order.DeliveryTime)
                 .GreaterThanOrEqualTo(DateTime.Now).WithMessage("Delivery time must be in the future.");
@@ -41,5 +37,4 @@ namespace Infrastructure.Configurations.Validators
                 .MaximumLength(500).WithMessage("Notice cannot exceed 500 characters.");
         }
     }
-
 }
