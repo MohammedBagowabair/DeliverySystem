@@ -17,6 +17,7 @@ namespace WebApi.Controllers
             _service = service;
             _mapper = mapper;
         }
+
         [HttpGet("GetAll")]
         public async Task<IEnumerable<OrderDTO>> GetAllAsync()
         {

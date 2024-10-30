@@ -1,5 +1,7 @@
 using Application.Interfaces;
+using Application.Mappings;
 using Application.Services;
+using AutoMapper;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +20,9 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IDriverService, DriverService>();
 
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
