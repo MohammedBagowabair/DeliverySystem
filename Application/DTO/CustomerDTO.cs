@@ -8,7 +8,7 @@ namespace Application.DTO
 {
     public class CustomerDTO : PersonDTO
     {
-        public List<OrderDTO> Orders { get; set; }  // List of orders as OrderDTOs
+        public List<OrderDTO>? Orders { get; set; }  // List of orders as OrderDTOs
     }
 
 }

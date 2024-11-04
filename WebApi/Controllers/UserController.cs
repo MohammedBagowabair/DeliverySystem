@@ -74,6 +74,8 @@ namespace WebApi.Controllers
                 var result = _mapper.Map<UserDTO>(user);
                 return new ApiResultModel<UserDTO>(result);
             }
+
+
             catch (DeliveryCoreException ex)
             {
                 //  _logger.LogWarning(ex, "");

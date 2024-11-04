@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces;
 using Domain.Entities;
+using Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,11 @@ namespace Application.Services
 
         public async Task<Customer> Create(Customer customer)
         {
+            var entity = (await _dbContext.GetAsync<Customer>(x => x.PhoneNumber1 == customer.PhoneNumber1))?.FirstOrDefault();
+            if (entity != null)
+            {
+                throw new DeliveryCoreException(ErrorCodes.USER_ALREADY_EXISTS_CODE);
+            }
             return await _dbContext.AddAsync<Customer>(customer);
         }
 
