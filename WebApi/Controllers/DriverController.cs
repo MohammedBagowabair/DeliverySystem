@@ -1,7 +1,9 @@
-﻿using Application.DTO;
+﻿using Application.Common.Models;
+using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
+using Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.Contracts;
 
@@ -21,41 +23,110 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
-        public async Task<IEnumerable<DriverDTO>> GetAllAsync()
+        public async Task<ApiResultModel<IEnumerable<DriverDTO>>> GetAllAsync()
         {
-            var results = _mapper.Map<IEnumerable<DriverDTO>>(await _service.GetAll());
-            return results;
+            try
+            {
+                var results = _mapper.Map<IEnumerable<DriverDTO>>(await _service.GetAll());
+                return new ApiResultModel<IEnumerable<DriverDTO>>(results);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<IEnumerable<DriverDTO>>(ex.Code, ex.Message, []);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "");
+                return new ApiResultModel<IEnumerable<DriverDTO>>(500, ex.Message, []);
+            }
+            
         }
 
         [HttpGet]
-        public async Task<DriverDTO> GetAsync(int id)
+        public async Task<ApiResultModel<DriverDTO>> GetAsync(int id)
         {
-            var driver = await _service.GetById(id);
-            var result = _mapper.Map<DriverDTO>(driver);
-            return result;
+            try
+            {
+                var driver = await _service.GetById(id);
+                var result = _mapper.Map<DriverDTO>(driver);
+                return new ApiResultModel<DriverDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<DriverDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex) 
+            {
+                return new ApiResultModel<DriverDTO>(500, ex.Message, null);
+
+            }
+
         }
 
         [HttpPost]
-        public async Task<DriverDTO> AddAsync(DriverDTO driverDto)
+        public async Task<ApiResultModel<DriverDTO>> AddAsync(DriverDTO driverDto)
         {
-            var driver = await _service.Create(_mapper.Map<Driver>(driverDto));
-            
-            return _mapper.Map<DriverDTO>(driver);
+            try
+            {
+                var driver = await _service.Create(_mapper.Map<Driver>(driverDto));
+
+                var result = _mapper.Map<DriverDTO>(driver);
+
+                return new ApiResultModel<DriverDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<DriverDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<DriverDTO>(500, ex.Message, null);
+            }
+
         }
 
         [HttpDelete]
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
-            var result = await _service.Delete(id);
-            return result;
+            try
+            {
+                var result = await _service.Delete(id);
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+
         }
 
 
         [HttpPut]
-        public async Task<bool> UpdateAsync(DriverDTO driverDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(DriverDTO driverDTO)
         {
-            await _service.Update(_mapper.Map<Driver>(driverDTO));
-            return true;
+            try
+            {
+                await _service.Update(_mapper.Map<Driver>(driverDTO));
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
     }
 }

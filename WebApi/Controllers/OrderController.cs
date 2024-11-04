@@ -67,28 +67,69 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        public async Task<OrderDTO> AddAsync(OrderDTO orderDto)
+        public async Task<ApiResultModel<OrderDTO>> AddAsync(OrderDTO orderDto)
         {
+            try
+            {
+                var order = await _service.Create(_mapper.Map<Order>(orderDto));
+                var result = _mapper.Map<OrderDTO>(order);
 
-            var order = await _service.Create(_mapper.Map<Order>(orderDto));
-            var result = _mapper.Map<OrderDTO>(order);
 
+                return new ApiResultModel<OrderDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<OrderDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<OrderDTO>(500, ex.Message, null);
+            }
 
-            return result;
+           
         }
         [HttpDelete]
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
-
-            var result = await _service.Delete(id);
-            return result;
+            try
+            {
+                var result = await _service.Delete(id);
+                return new ApiResultModel<bool>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
         [HttpPut]
-        public async Task<bool> UpdateAsync(OrderDTO orderDto)
+        public async Task<ApiResultModel<bool>> UpdateAsync(OrderDTO orderDto)
         {
+            try
+            {
+                await _service.Update(_mapper.Map<Order>(orderDto));
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
 
-            await _service.Update(_mapper.Map<Order>(orderDto));
-            return true;
+           
         }
     }
 }

@@ -1,7 +1,9 @@
-﻿using Application.DTO;
+﻿using Application.Common.Models;
+using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
+using Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,39 +23,110 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        public async Task<IEnumerable<UserDTO>> GetAllAsync()
+        public async Task<ApiResultModel<IEnumerable<UserDTO>>> GetAllAsync()
         {
-            var results = _mapper.Map<IEnumerable<UserDTO>>(await _service.GetAll());
-            return results;
+            try
+            {
+                var results = _mapper.Map<IEnumerable<UserDTO>>(await _service.GetAll());
+                return new ApiResultModel<IEnumerable<UserDTO>>(results);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<IEnumerable<UserDTO>>(ex.Code, ex.Message, []);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<IEnumerable<UserDTO>>(500, ex.Message, []);
+            }
+            
         }
 
         [HttpGet]
-        public async Task<UserDTO> GetAsync(int id)
+        public async Task<ApiResultModel<UserDTO>> GetAsync(int id)
         {
-            var user = await _service.GetById(id);
-            var result = _mapper.Map<UserDTO>(user);
-            return result;
+            try
+            {
+                var user = await _service.GetById(id);
+                var result = _mapper.Map<UserDTO>(user);
+                return new ApiResultModel<UserDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<UserDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<UserDTO>(500, ex.Message, null);
+            }
+           
         }
 
         [HttpPost]
-        public async Task<UserDTO> AddAsync(UserDTO userDTO)
+        public async Task<ApiResultModel<UserDTO>> AddAsync(UserDTO userDTO)
         {
-            var user= await _service.Create(_mapper.Map<User>(userDTO));
-            return _mapper.Map<UserDTO>(user);
+            try
+            {
+                var user = await _service.Create(_mapper.Map<User>(userDTO));
+                var result = _mapper.Map<UserDTO>(user);
+                return new ApiResultModel<UserDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<UserDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<UserDTO>(500, ex.Message, null);
+            }
+            
         }
 
         [HttpDelete]
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
-            var result = await _service.Delete(id);
-            return result;
+            try
+            {
+                var result = await _service.Delete(id);
+                return new ApiResultModel<bool>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
 
         [HttpPut]
-        public async Task<bool> UpdateAsync(UserDTO userDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(UserDTO userDTO)
         {
-            await _service.Update(_mapper.Map<User>(userDTO));
-            return true;
+            try
+            {
+                await _service.Update(_mapper.Map<User>(userDTO));
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
 
     }

@@ -20,9 +20,9 @@
             ErrorCodes.USER_ACCOUNT_INACTIVE_CODE => ErrorCodes.USER_ACCOUNT_INACTIVE_MESSAGE,
             ErrorCodes.ROLE_NAME_NOT_FOUND => ErrorCodes.ROLE_NAME_NOT_FOUND_MESSAGE,
             ErrorCodes.DB_ENTITY_IS_INACTIVE_CODE => ErrorCodes.DB_ENTITY_IS_INACTIVE_MESSAGE,
-            ErrorCodes.EVENT_NOT_FOUND_CODE => ErrorCodes.EVENT_NOT_FOUND_MESSAGE,
-            ErrorCodes.TICKET_NOT_FOUND_CODE => ErrorCodes.TICKET_NOT_FOUND_MESSAGE,
-            ErrorCodes.PERMISSION_DENIED_CODE => ErrorCodes.PERMISSION_DENIED_MESSAGE,
+            //ErrorCodes.EVENT_NOT_FOUND_CODE => ErrorCodes.EVENT_NOT_FOUND_MESSAGE,
+            //ErrorCodes.TICKET_NOT_FOUND_CODE => ErrorCodes.TICKET_NOT_FOUND_MESSAGE,
+            //ErrorCodes.PERMISSION_DENIED_CODE => ErrorCodes.PERMISSION_DENIED_MESSAGE,
             ErrorCodes.IMAGE_DIDNT_SAVE => ErrorCodes.IMAGE_DIDNT_SAVE_MESSAGE,
 
             _ => ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE,

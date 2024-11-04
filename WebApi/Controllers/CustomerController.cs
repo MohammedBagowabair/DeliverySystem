@@ -1,7 +1,9 @@
-﻿using Application.DTO;
+﻿using Application.Common.Models;
+using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
+using Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,38 +23,109 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
-        public async Task<IEnumerable<CustomerDTO>> GetAllAsync()
+        public async Task<ApiResultModel<IEnumerable<CustomerDTO>>> GetAllAsync()
         {
-            var results= _mapper.Map<IEnumerable<CustomerDTO>>(await _service.GetAll());
-            return results;
+            try
+            {
+                var results = _mapper.Map<IEnumerable<CustomerDTO>>(await _service.GetAll());
+                return new ApiResultModel<IEnumerable<CustomerDTO>>(results);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<IEnumerable<CustomerDTO>>(ex.Code, ex.Message, []);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<IEnumerable<CustomerDTO>>(500, ex.Message, []);
+            }
+            
         }
 
         [HttpGet]
-        public async Task<CustomerDTO> GetAsync(int id)
+        public async Task<ApiResultModel<CustomerDTO>> GetAsync(int id)
         {
-            var result = _mapper.Map<CustomerDTO>(await _service.GetById(id));
-            return result;
+            try
+            {
+                var result = _mapper.Map<CustomerDTO>(await _service.GetById(id));
+                return new ApiResultModel<CustomerDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<CustomerDTO>(ex.Code, ex.Message,null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<CustomerDTO>(500, ex.Message, null);
+            }
+
         }
 
         [HttpPost]
-        public async Task<CustomerDTO> AddAsync( CustomerDTO customerDTO)
+        public async Task<ApiResultModel<CustomerDTO>> AddAsync( CustomerDTO customerDTO)
         {
-            var customer = await _service.Create( _mapper.Map<Customer>(customerDTO));
-            return _mapper.Map<CustomerDTO>(customer);
+           
+            try
+            {
+                var customer = await _service.Create(_mapper.Map<Customer>(customerDTO));
+                var result= _mapper.Map<CustomerDTO>(customer);
+                return new ApiResultModel<CustomerDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<CustomerDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<CustomerDTO>(500, ex.Message, null);
+            }
         }
 
         [HttpPut]
-        public async Task<bool> UpdateAsync(CustomerDTO customerDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(CustomerDTO customerDTO)
         {
-            await _service.Update(_mapper.Map<Customer>(customerDTO));
-            return true;
+            try
+            {
+                await _service.Update(_mapper.Map<Customer>(customerDTO));
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
 
         [HttpDelete]
-        public async Task<bool> DeleteAsync(int id) 
+        public async Task<ApiResultModel<bool>> DeleteAsync(int id) 
         {
-          var result = await _service.Delete(id);
-            return result;
+            try
+            {
+                var result = await _service.Delete(id);
+                return new ApiResultModel<bool>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<bool>(500, ex.Message, false);
+            }
+            
         }
     }
 }
