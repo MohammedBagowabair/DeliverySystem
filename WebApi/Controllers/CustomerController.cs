@@ -65,33 +65,35 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ApiResultModel<CustomerDTO>> AddAsync( CustomerDTO customerDTO)
+        public async Task<ApiResultModel<CreateUpdateCustomerDTO>> AddAsync(CreateUpdateCustomerDTO createCustomerDTO)
         {
            
             try
             {
-                var customer = await _service.Create(_mapper.Map<Customer>(customerDTO));
-                var result= _mapper.Map<CustomerDTO>(customer);
-                return new ApiResultModel<CustomerDTO>(result);
+                var customer = await _service.Create(_mapper.Map<Customer>(createCustomerDTO));
+
+                var result= _mapper.Map<CreateUpdateCustomerDTO>(customer);
+
+                return new ApiResultModel<CreateUpdateCustomerDTO>(result);
             }
             catch (DeliveryCoreException ex)
             {
                 //  _logger.LogWarning(ex, "");
-                return new ApiResultModel<CustomerDTO>(ex.Code, ex.Message, null);
+                return new ApiResultModel<CreateUpdateCustomerDTO>(ex.Code, ex.Message, null);
             }
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<CustomerDTO>(500, ex.Message, null);
+                return new ApiResultModel<CreateUpdateCustomerDTO>(500, ex.Message, null);
             }
         }
 
         [HttpPut]
-        public async Task<ApiResultModel<bool>> UpdateAsync(CustomerDTO customerDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateCustomerDTO createUpdateCustomerDTO)
         {
             try
             {
-                await _service.Update(_mapper.Map<Customer>(customerDTO));
+                await _service.Update(_mapper.Map<Customer>(createUpdateCustomerDTO));
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)

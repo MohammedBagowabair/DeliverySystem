@@ -1,11 +1,12 @@
 ﻿using Domain.Entities;
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Interfaces
 {
     public interface IApplicationDbContext
     {
-
+        //DbContext _dbContext { get; }
         Task<bool> DeleteAsync<T>(int id) where T : BaseEntity;
         Task UpdateAsync<T>(T entity) where T : BaseEntity;
         Task<T> AddAsync<T>(T entity) where T : BaseEntity;

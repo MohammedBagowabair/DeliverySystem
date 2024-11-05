@@ -4,10 +4,12 @@ using Infrastructure.Configurations.Validators;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
+
 namespace Infrastructure
 {
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
+        //public DbContext DbContext => this;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
 
@@ -17,6 +19,7 @@ namespace Infrastructure
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Order> Orders { get; set; }
+
 
         public async Task<T> AddAsync<T>(T entity) where T : BaseEntity
         {

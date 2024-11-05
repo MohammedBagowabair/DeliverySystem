@@ -65,23 +65,23 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ApiResultModel<DriverDTO>> AddAsync(DriverDTO driverDto)
+        public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try
             {
-                var driver = await _service.Create(_mapper.Map<Driver>(driverDto));
+                var driver = await _service.Create(_mapper.Map<Driver>(createDriverDTO));
 
-                var result = _mapper.Map<DriverDTO>(driver);
+                var result = _mapper.Map<CreateUpdateDriverDTO>(driver);
 
-                return new ApiResultModel<DriverDTO>(result);
+                return new ApiResultModel<CreateUpdateDriverDTO>(result);
             }
             catch (DeliveryCoreException ex)
             {
-                return new ApiResultModel<DriverDTO>(ex.Code, ex.Message, null);
+                return new ApiResultModel<CreateUpdateDriverDTO>(ex.Code, ex.Message, null);
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<DriverDTO>(500, ex.Message, null);
+                return new ApiResultModel<CreateUpdateDriverDTO>(500, ex.Message, null);
             }
 
         }
@@ -109,11 +109,11 @@ namespace WebApi.Controllers
 
 
         [HttpPut]
-        public async Task<ApiResultModel<bool>> UpdateAsync(DriverDTO driverDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateDriverDTO createUpdateDriverDTO)
         {
             try
             {
-                await _service.Update(_mapper.Map<Driver>(driverDTO));
+                await _service.Update(_mapper.Map<Driver>(createUpdateDriverDTO));
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)
