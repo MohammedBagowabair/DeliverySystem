@@ -37,10 +37,8 @@ namespace Infrastructure
             return true;
         }
 
-
-
         public async Task<IEnumerable<T>> GetAsync<T>(Expression<Func<T, bool>> predicate = null, Func<IQueryable<T>, IQueryable<T>> includeExpression = null
-   ) where T : BaseEntity
+          ) where T : BaseEntity
         {
             IQueryable<T> query = Set<T>().AsNoTracking();
 
@@ -62,6 +60,8 @@ namespace Infrastructure
             Set<T>().Update(entity);
             await SaveChangesAsync();
         }
+
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
