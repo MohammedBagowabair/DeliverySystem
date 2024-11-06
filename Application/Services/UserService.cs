@@ -3,6 +3,7 @@ using Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -18,7 +19,21 @@ namespace Application.Services
 
         public async Task<User> Create(User user)
         {
+            CreatePasswordHash(user.Password, out string passwordHash, out string passwordSalt);
+
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+            user.Password = null;
+
             return await _dbContext.AddAsync<User>(user);
+        }
+        private void CreatePasswordHash(string password, out string passwordHash, out string passwordSalt)
+        {
+            using (var hmac = new HMACSHA512())
+            {
+                passwordSalt = Convert.ToBase64String(hmac.Key);
+                passwordHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
+            }
         }
 
         public async Task<bool> Delete(int id)

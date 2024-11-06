@@ -70,6 +70,9 @@ namespace WebApi.Controllers
         {
             try
             {
+                if (string.IsNullOrEmpty(userDTO.Password))
+                    return new ApiResultModel<UserDTO>(400, "Password is required", null);
+
                 var user = await _service.Create(_mapper.Map<User>(userDTO));
                 var result = _mapper.Map<UserDTO>(user);
                 return new ApiResultModel<UserDTO>(result);

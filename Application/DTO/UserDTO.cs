@@ -9,7 +9,9 @@ namespace Application.DTO
     public class UserDTO : PersonDTO
     {
         public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;  // E.g., Admin, Customer
+        public string Role { get; set; } = string.Empty; 
+        public string Password { get; set; }
+
     }
 
 }
