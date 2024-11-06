@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace Application.DTO
 {
-    public class UserDTO : PersonDTO
+    public class LoginDto
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; }
-
     }
-
 }

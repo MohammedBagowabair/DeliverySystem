@@ -65,15 +65,15 @@ namespace WebApi.Controllers
            
         }
 
-        [HttpPost]
-        public async Task<ApiResultModel<UserDTO>> AddAsync(UserDTO userDTO)
+        [HttpPost("Register")]
+        public async Task<ApiResultModel<UserDTO>> Register(UserDTO userDTO)
         {
             try
             {
                 if (string.IsNullOrEmpty(userDTO.Password))
-                    return new ApiResultModel<UserDTO>(400, "Password is required", null);
+                    throw new DeliveryCoreException(ErrorCodes.USER_PASSWORD_IS_NULL_CODE);
 
-                var user = await _service.Create(_mapper.Map<User>(userDTO));
+                var user = await _service.Register(userDTO);
                 var result = _mapper.Map<UserDTO>(user);
                 return new ApiResultModel<UserDTO>(result);
             }
@@ -90,6 +90,26 @@ namespace WebApi.Controllers
                 return new ApiResultModel<UserDTO>(500, ex.Message, null);
             }
             
+        }
+
+        [HttpPost("Login")]
+        public async Task<ApiResultModel<JwtTokenModel>>Login(LoginDto loginDTO)
+        {
+            try
+            {
+                var userLogin = await _service.Login(loginDTO);
+                return new ApiResultModel<JwtTokenModel>(userLogin);    
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<JwtTokenModel>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<JwtTokenModel>(500, ex.Message, null);
+            }
         }
 
         [HttpDelete]

@@ -16,6 +16,8 @@ namespace Infrastructure.Configurations.Validators
                    .IsRequired()  // Ensures Email is not nullable
                    .HasMaxLength(100);  // Sets max length to 100 characters
 
+            builder.HasIndex(user => user.Email).IsUnique();
+
             // Configure PasswordHash property
             builder.Property(user => user.PasswordHash)
                    .IsRequired()  // Ensures PasswordHash is not nullable

@@ -2,8 +2,10 @@
 using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.Contracts;
 
@@ -65,6 +67,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles =Roles.Staff)]
         public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try

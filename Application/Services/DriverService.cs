@@ -1,6 +1,8 @@
 ﻿using Application.Interfaces;
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace Application.Services
 {
+    
     public class DriverService : IDriverService
     {
         public IApplicationDbContext _dbContext;
@@ -16,6 +19,8 @@ namespace Application.Services
         {
             _dbContext = dbContext;
         }
+
+        
         public async Task<Driver> Create(Driver driver)
         {
             var driverInDb = (await _dbContext.GetAsync<Driver>(x => x.PhoneNumber1==driver.PhoneNumber1))?.FirstOrDefault();

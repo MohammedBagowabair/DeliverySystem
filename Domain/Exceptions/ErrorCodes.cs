@@ -9,8 +9,8 @@
         public const int USER_PASSWORD_NOT_MATCHED_CODE = 9001;
         internal const string USER_PASSWORD_NOT_MATCHED_MESSAGE = "Password is not matched";
 
-        public const int ADMIN_INVALID_OTP_CODE = 9002;
-        internal const string ADMIN_INVALID_OTP_MESSAGE = "Invalid One Time Password (OTP)";
+        //public const int ADMIN_INVALID_OTP_CODE = 9002;
+        //internal const string ADMIN_INVALID_OTP_MESSAGE = "Invalid One Time Password (OTP)";
 
         public const int INVALID_USERNAME_OR_EMAIL_ADDRESS_CODE = 9002;
         internal const string INVALID_USERNAME_OR_EMAIL_ADDRESS_MESSAGE = "Invalid username or email address";

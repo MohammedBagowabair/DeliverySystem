@@ -1,4 +1,6 @@
-﻿using Domain.Entities;
+﻿using Application.Common.Models;
+using Application.DTO;
+using Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +11,8 @@ namespace Application.Interfaces
 {
     public interface IUserService
     {
-        Task<User> Create(User user);
+        Task<User> Register(UserDTO userDTO);
+        Task<JwtTokenModel> Login(LoginDto loginDto);
 
         Task Update(User user);
 
