@@ -25,6 +25,8 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+
         public async Task<ApiResultModel<IEnumerable<DriverDTO>>> GetAllAsync()
         {
             try
@@ -46,6 +48,8 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+
         public async Task<ApiResultModel<DriverDTO>> GetAsync(int id)
         {
             try
@@ -67,7 +71,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles =Roles.Staff)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try
@@ -90,6 +94,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -112,6 +117,7 @@ namespace WebApi.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateDriverDTO createUpdateDriverDTO)
         {
             try

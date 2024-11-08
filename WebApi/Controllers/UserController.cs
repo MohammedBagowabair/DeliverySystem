@@ -2,8 +2,10 @@
 using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +25,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<UserDTO>>> GetAllAsync()
         {
             try
@@ -44,6 +47,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<UserDTO>> GetAsync(int id)
         {
             try
@@ -66,6 +70,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("Register")]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<UserDTO>> Register(UserDTO userDTO)
         {
             try
@@ -113,6 +118,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -134,6 +140,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(UserDTO userDTO)
         {
             try

@@ -57,20 +57,7 @@ namespace Application.Services
             salt = Convert.ToBase64String(hMAC.Key);
             hash = Convert.ToBase64String(hMAC.ComputeHash(Encoding.UTF8.GetBytes(password)));
         }
-        public static bool ValidatePassword(string password, string hash, string salt)
-        {
-            using HMAC hMAC = new HMACSHA256(Convert.FromBase64String(salt));
-            return Convert.ToBase64String(hMAC.ComputeHash(Encoding.UTF8.GetBytes(password))) == hash;
-        }
-        //private void CreatePasswordHash(string password, out string passwordHash, out string passwordSalt)
-        //{
-        //    using (var hmac = new HMACSHA512())
-        //    {
-        //        passwordSalt = Convert.ToBase64String(hmac.Key);
-        //        passwordHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
-        //    }
-        //}
-
+       
         public async Task<JwtTokenModel> Login(LoginDto loginDto)
         {
             var userInDb = (await _dbContext.GetAsync<User>(x => x.Email == loginDto.Email))?.FirstOrDefault();
@@ -90,13 +77,11 @@ namespace Application.Services
             // Generate and return JWT token if user is authenticated
             return await GenerateToken(userInDb);
         }
-
-        //public static bool ValidatePassword(string password, string hash, string salt)
-        //{
-        //    using HMAC hMAC = new HMACSHA256(Convert.FromBase64String(salt));
-        //    return Convert.ToBase64String(hMAC.ComputeHash(Encoding.UTF8.GetBytes(password))) == hash;
-        //}
-
+        public static bool ValidatePassword(string password, string hash, string salt)
+        {
+            using HMAC hMAC = new HMACSHA256(Convert.FromBase64String(salt));
+            return Convert.ToBase64String(hMAC.ComputeHash(Encoding.UTF8.GetBytes(password))) == hash;
+        }
         public async Task<JwtTokenModel> GenerateToken(User user)
         {
             //int? UserId = user.Id;

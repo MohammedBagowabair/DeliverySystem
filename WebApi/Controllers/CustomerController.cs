@@ -2,8 +2,10 @@
 using Application.DTO;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +25,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<CustomerDTO>>> GetAllAsync()
         {
             try
@@ -44,6 +47,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CustomerDTO>> GetAsync(int id)
         {
             try
@@ -65,6 +69,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateCustomerDTO>> AddAsync(CreateUpdateCustomerDTO createCustomerDTO)
         {
            
@@ -89,6 +94,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateCustomerDTO createUpdateCustomerDTO)
         {
             try
@@ -110,6 +116,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id) 
         {
             try
