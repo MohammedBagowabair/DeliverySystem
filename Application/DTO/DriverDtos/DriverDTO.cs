@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Application.DTO.OrderDtos;
 
-namespace Application.DTO
+namespace Application.DTO.DriverDtos
 {
-    public class CreateUpdateDriverDTO:PersonDTO
+    public class DriverDTO : PersonDTO
     {
         public decimal CommissionRate { get; set; }
         public string Shift { get; set; } = string.Empty;
+        public List<OrderDTO>? Orders { get; set; }
     }
+
 }

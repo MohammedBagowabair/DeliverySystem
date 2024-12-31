@@ -1,20 +1,25 @@
 ﻿using Domain.Constants;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Domain.Entities
+namespace Application.DTO.OrderDtos
 {
-    public class Order : BaseEntity
+    public class UpdateOrderDTO : BaseEntityDTO
     {
 
+        [Required(ErrorMessage = "Customer Id is required.")]
         public int CustomerId { get; set; }
-        public Customer Customer { get; set; }
 
+        [Required(ErrorMessage = "Driver Id is required.")]
         public int DriverId { get; set; }
-        public Driver Driver { get; set; }
 
         public DateTime DeliveryTime { get; set; }
 
-        [Required(ErrorMessage= "Choose Payment method")]
+        [Required(ErrorMessage = "Choose Payment method")]
         [StringLength(20, ErrorMessage = "Payment method cannot exceed 20 characters.")]
         public string PaymentMethod { get; set; } = string.Empty;
 
@@ -30,7 +35,6 @@ namespace Domain.Entities
         public decimal FinalPrice { get; set; }
 
         public OrderStatus orderStatus { get; set; }
-
         [Required(ErrorMessage = "Title is Required")]
 
         [StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
@@ -40,5 +44,4 @@ namespace Domain.Entities
         public string Notice { get; set; } = string.Empty;
 
     }
-
 }

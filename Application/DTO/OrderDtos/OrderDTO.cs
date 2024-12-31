@@ -1,20 +1,32 @@
-﻿using Domain.Constants;
+﻿using Application.DTO.CustomerDtos;
+using Application.DTO.DriverDtos;
+using Domain.Constants;
+using Domain.Entities;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Domain.Entities
+namespace Application.DTO.OrderDtos
 {
-    public class Order : BaseEntity
+    public class OrderDTO : BaseEntityDTO
     {
 
+        [Required(ErrorMessage = "Customer Id is required.")]
         public int CustomerId { get; set; }
-        public Customer Customer { get; set; }
+        public CustomerOrderPagedDTO Customer { get; set; }
 
+
+        [Required(ErrorMessage = "Driver Id is required.")]
         public int DriverId { get; set; }
-        public Driver Driver { get; set; }
+        public DriverPagedDTO Driver { get; set; }
+
 
         public DateTime DeliveryTime { get; set; }
 
-        [Required(ErrorMessage= "Choose Payment method")]
+        [Required(ErrorMessage = "Choose Payment method")]
         [StringLength(20, ErrorMessage = "Payment method cannot exceed 20 characters.")]
         public string PaymentMethod { get; set; } = string.Empty;
 
@@ -30,7 +42,6 @@ namespace Domain.Entities
         public decimal FinalPrice { get; set; }
 
         public OrderStatus orderStatus { get; set; }
-
         [Required(ErrorMessage = "Title is Required")]
 
         [StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
@@ -38,6 +49,7 @@ namespace Domain.Entities
 
         [StringLength(50, ErrorMessage = "Notice cannot exceed 50 characters.")]
         public string Notice { get; set; } = string.Empty;
+
 
     }
 

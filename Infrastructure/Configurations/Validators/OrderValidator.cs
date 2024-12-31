@@ -44,7 +44,7 @@ namespace Infrastructure.Configurations.Validators
                    .IsRequired();  // Ensures FinalPrice is not nullable
 
             // Configure OrderStatus property
-            builder.Property(order => order.OrderStatus)
+            builder.Property(order => order.orderStatus)
                    .IsRequired()
                    .HasMaxLength(50);  // Assuming a max length for OrderStatus string
 
@@ -57,5 +57,8 @@ namespace Infrastructure.Configurations.Validators
             builder.HasOne<Customer>(x => x.Customer).WithMany(x => x.Orders).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
         }
     }
+
+    
+
 
 }

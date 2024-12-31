@@ -1,5 +1,6 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.AccountDtos;
+using Application.DTO.UserDtos;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Constants;
@@ -70,11 +71,13 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("Register")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<UserDTO>> Register(UserDTO userDTO)
         {
             try
             {
+
+
                 if (string.IsNullOrEmpty(userDTO.Password))
                     throw new DeliveryCoreException(ErrorCodes.USER_PASSWORD_IS_NULL_CODE);
 

@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Domain.Common.Models;
 using Domain.Entities;
 using Infrastructure.Configurations.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -14,12 +15,10 @@ namespace Infrastructure
         {
 
         }
-
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Order> Orders { get; set; }
-
 
         public async Task<T> AddAsync<T>(T entity) where T : BaseEntity
         {
@@ -27,7 +26,6 @@ namespace Infrastructure
             await SaveChangesAsync();
             return entity;
         }
-
         public async Task<bool> DeleteAsync<T>(int id) where T : BaseEntity
         {
             var entity = await Set<T>().FindAsync(id) ?? throw new Exception("Record Not Found");
@@ -36,7 +34,6 @@ namespace Infrastructure
             await SaveChangesAsync();
             return true;
         }
-
         public async Task<IEnumerable<T>> GetAsync<T>(Expression<Func<T, bool>> predicate = null, Func<IQueryable<T>, IQueryable<T>> includeExpression = null
           ) where T : BaseEntity
         {
@@ -54,15 +51,29 @@ namespace Infrastructure
             // query=query.OrderByDescending(x=>x.Id);
             return await query.ToListAsync();
         }
-
         public async Task UpdateAsync<T>(T entity) where T : BaseEntity
         {
             Set<T>().Update(entity);
             await SaveChangesAsync();
         }
-
-
-
+        public async Task<PagedList<T>> GetPagedAsync<T>(int page, int PageSize, System.Linq.Expressions.Expression<Func<T, bool>> predicate = null, string[] includes = null, bool IsOrde = false) where T : BaseEntity
+        {
+            IQueryable<T> query = Set<T>().AsNoTracking();
+            var count = predicate is not null ? await query.Where(predicate).CountAsync() : await query.CountAsync();
+            query = predicate != null ? query.Where(predicate) : query;
+            query = IsOrde == false ? query.OrderBy(f => f.Id) : query.OrderByDescending(x => x.Id);
+            query = query.Skip((page - 1) * PageSize);
+            query = query.Take(PageSize);
+            if (includes != null && includes.Length > 0)
+            {
+                foreach (string include in includes)
+                {
+                    query = query.Include(include);
+                }
+            }
+            var entities = await query.ToListAsync();
+            return new PagedList<T>(count, entities, page, PageSize);
+        }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             new CustomerValidator().Configure(modelBuilder.Entity<Customer>());

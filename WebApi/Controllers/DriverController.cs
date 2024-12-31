@@ -1,12 +1,14 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.DriverDtos;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System.Diagnostics.Contracts;
 
 namespace WebApi.Controllers
@@ -23,10 +25,8 @@ namespace WebApi.Controllers
             _mapper = mapper;
         }
 
-
         [HttpGet("GetAll")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
-
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<DriverDTO>>> GetAllAsync()
         {
             try
@@ -36,20 +36,17 @@ namespace WebApi.Controllers
             }
             catch (DeliveryCoreException ex)
             {
-                //  _logger.LogWarning(ex, "");
                 return new ApiResultModel<IEnumerable<DriverDTO>>(ex.Code, ex.Message, []);
             }
             catch (Exception ex)
             {
-                //_logger.LogWarning(ex, "");
                 return new ApiResultModel<IEnumerable<DriverDTO>>(500, ex.Message, []);
             }
             
         }
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
-
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<DriverDTO>> GetAsync(int id)
         {
             try
@@ -71,7 +68,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try
@@ -94,7 +91,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -115,9 +112,8 @@ namespace WebApi.Controllers
 
         }
 
-
         [HttpPut]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateDriverDTO createUpdateDriverDTO)
         {
             try
@@ -137,5 +133,49 @@ namespace WebApi.Controllers
             }
             
         }
+
+
+
+        [HttpGet("GetDriversPaged")]
+        public async Task<ApiResultModel<PagedList<Driver>>> GetDriversPaged(int page = 1, int pageSize = 10)
+        {
+            try
+            {
+
+                return new ApiResultModel<PagedList<Driver>>( await _service.GetAllPagedAsync(page,pageSize));
+
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<PagedList<Driver>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<PagedList<Driver>>(500, ex.Message, null);
+            }
+
+        }
+
+        [HttpGet("SearchDrivers")]
+        public async Task<ApiResultModel<PagedList<DriverDTO>>> SearchDriversAsync(string searchTerm, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var results = await _service.SearchDriversAsync(searchTerm, page, pageSize);
+                var mappedResults = _mapper.Map<PagedList<DriverDTO>>(results);
+                return new ApiResultModel<PagedList<DriverDTO>>(mappedResults);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<PagedList<DriverDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<PagedList<DriverDTO>>(500, ex.Message, null);
+            }
+        }
+
     }
 }

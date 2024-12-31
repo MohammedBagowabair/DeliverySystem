@@ -4,7 +4,7 @@
     {
         public decimal CommissionRate { get; set; }   // Commission rate (e.g., 70%)
         public string Shift { get; set; } = string.Empty;              // Driver shift (e.g., Morning, Night)
-        public ICollection<Order> Orders { get; set; }
+        public ICollection<Order>? Orders { get; set; }
     }
 
 }

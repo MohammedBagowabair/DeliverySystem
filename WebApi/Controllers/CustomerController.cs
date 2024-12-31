@@ -1,7 +1,8 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.CustomerDtos;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -25,7 +26,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<CustomerDTO>>> GetAllAsync()
         {
             try
@@ -47,7 +48,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CustomerDTO>> GetAsync(int id)
         {
             try
@@ -69,7 +70,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateCustomerDTO>> AddAsync(CreateUpdateCustomerDTO createCustomerDTO)
         {
            
@@ -94,7 +95,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateCustomerDTO createUpdateCustomerDTO)
         {
             try
@@ -116,7 +117,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id) 
         {
             try
@@ -135,6 +136,47 @@ namespace WebApi.Controllers
                 return new ApiResultModel<bool>(500, ex.Message, false);
             }
             
+        }
+
+        [HttpGet("GetCustomersPaged")]
+        public async Task<ApiResultModel<PagedList<Customer>>> GetCustomersPaged(int page = 1, int pageSize = 10)
+        {
+            try
+            {
+
+                return new ApiResultModel<PagedList<Customer>>(await _service.GetAllPagedAsync(page, pageSize));
+
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<PagedList<Customer>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<PagedList<Customer>>(500, ex.Message, null);
+            }
+
+        }
+
+        [HttpGet("SearchCustomers")]
+        public async Task<ApiResultModel<PagedList<CustomerDTO>>> SearchCustomersAsync(string searchTerm, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var results = await _service.SearchCustomersAsync(searchTerm, page, pageSize);
+                var mappedResults = _mapper.Map<PagedList<CustomerDTO>>(results);
+                return new ApiResultModel<PagedList<CustomerDTO>>(mappedResults);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<PagedList<CustomerDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<PagedList<CustomerDTO>>(500, ex.Message, null);
+            }
         }
     }
 }

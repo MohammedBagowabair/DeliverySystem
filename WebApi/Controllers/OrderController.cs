@@ -1,7 +1,8 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.OrderDtos;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -23,7 +24,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<OrderDTO>>> GetAllAsync()
         {
             try
@@ -47,7 +48,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<OrderDTO>> GetAsync(int id)
         {
             try
@@ -70,33 +71,33 @@ namespace WebApi.Controllers
 
         }
 
+
         [HttpPost]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
-        public async Task<ApiResultModel<OrderDTO>> AddAsync(OrderDTO orderDto)
+        public async Task<ApiResultModel<OrderDTO>> AddAsync([FromBody] CreateOrderDTO createOrderDTO)
         {
             try
             {
-                var order = await _service.Create(_mapper.Map<Order>(orderDto));
-                var result = _mapper.Map<OrderDTO>(order);
+                var order = _mapper.Map<Order>(createOrderDTO);
 
+                // Create the order
+                var createdOrder = await _service.Create(order);
 
+                // Map back to DTO for the response
+                var result = _mapper.Map<OrderDTO>(createdOrder);
                 return new ApiResultModel<OrderDTO>(result);
             }
             catch (DeliveryCoreException ex)
             {
-                //  _logger.LogWarning(ex, "");
                 return new ApiResultModel<OrderDTO>(ex.Code, ex.Message, null);
             }
             catch (Exception ex)
             {
-                //_logger.LogWarning(ex, "")
                 return new ApiResultModel<OrderDTO>(500, ex.Message, null);
             }
-
-           
         }
+
         [HttpDelete]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -117,12 +118,12 @@ namespace WebApi.Controllers
             
         }
         [HttpPut]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
-        public async Task<ApiResultModel<bool>> UpdateAsync(OrderDTO orderDto)
+        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        public async Task<ApiResultModel<bool>> UpdateAsync(UpdateOrderDTO updateOrderDTO)
         {
             try
             {
-                await _service.Update(_mapper.Map<Order>(orderDto));
+                await _service.Update(_mapper.Map<Order>(updateOrderDTO));
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)
@@ -138,5 +139,48 @@ namespace WebApi.Controllers
 
            
         }
+
+
+        [HttpGet("GetOrdersPaged")]
+        public async Task<ApiResultModel<PagedList<OrderDTO>>> GetOrdersPaged(int page = 1, int pageSize = 10)
+        {
+            try
+            {
+
+                return new ApiResultModel<PagedList<OrderDTO>>(_mapper.Map < PagedList < OrderDTO > >(await _service.GetAllPagedAsync(page, pageSize)));
+
+            }
+            catch (DeliveryCoreException ex)
+            {
+                //  _logger.LogWarning(ex, "");
+                return new ApiResultModel<PagedList<OrderDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogWarning(ex, "")
+                return new ApiResultModel<PagedList<OrderDTO>>(500, ex.Message, null);
+            }
+
+        }
+
+        [HttpGet("SearchOrders")]
+        public async Task<ApiResultModel<PagedList<OrderDTO>>> SearchOrdersAsync(string searchTerm, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var results = await _service.SearchOrdersAsync(searchTerm, page, pageSize);
+                var mappedResults = _mapper.Map<PagedList<OrderDTO>>(results);
+                return new ApiResultModel<PagedList<OrderDTO>>(mappedResults);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(500, ex.Message, null);
+            }
+        }
+
     }
 }

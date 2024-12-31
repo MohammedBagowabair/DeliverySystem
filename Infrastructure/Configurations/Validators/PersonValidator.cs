@@ -25,6 +25,10 @@ namespace Infrastructure.Configurations.Validators
             // Configure Address property
             builder.Property(person => person.Address)
                    .IsRequired();  // Ensures it's not nullable
+
+            builder.Property(person => person.IsActive)
+                .IsRequired()  // Ensures it's not nullable
+                .HasDefaultValue(true);  // Sets default value to true
         }
     }
 }

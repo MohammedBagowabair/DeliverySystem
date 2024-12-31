@@ -1,5 +1,6 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.AccountDtos;
+using Application.DTO.UserDtos;
 using Application.Interfaces;
 using Domain.Constants;
 using Domain.Entities;
@@ -9,7 +10,6 @@ using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data.Entity;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;

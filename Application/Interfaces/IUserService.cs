@@ -1,5 +1,6 @@
 ﻿using Application.Common.Models;
-using Application.DTO;
+using Application.DTO.AccountDtos;
+using Application.DTO.UserDtos;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
