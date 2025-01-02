@@ -16,7 +16,6 @@ namespace Application.Interfaces
         Task<Customer> GetById(int id);
         Task<IEnumerable<Customer>> GetAll();
 
-
         Task<int> CountAsync();
 
         Task<PagedList<Customer>> GetAllPagedAsync(int page, int PageSize);

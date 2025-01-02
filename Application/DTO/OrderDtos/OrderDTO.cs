@@ -2,6 +2,7 @@
 using Application.DTO.DriverDtos;
 using Domain.Constants;
 using Domain.Entities;
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -27,8 +28,7 @@ namespace Application.DTO.OrderDtos
         public DateTime DeliveryTime { get; set; }
 
         [Required(ErrorMessage = "Choose Payment method")]
-        [StringLength(20, ErrorMessage = "Payment method cannot exceed 20 characters.")]
-        public string PaymentMethod { get; set; } = string.Empty;
+        public PaymentMethod paymentMethod { get; set; }
 
         [Required]
         [Range(0, double.MaxValue, ErrorMessage = "Delivery fee must be a positive number.")]

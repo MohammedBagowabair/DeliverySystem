@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Application.DTO.OrderDtos;
+using DeliverySystem.ClientUI.Enums;
 
 namespace Application.DTO.DriverDtos
 {
     public class DriverDTO : PersonDTO
     {
         public decimal CommissionRate { get; set; }
-        public string Shift { get; set; } = string.Empty;
+        public Shift Shift { get; set; }
         public List<OrderDTO>? Orders { get; set; }
     }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DeliverySystem.ClientUI.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,6 @@ namespace Application.DTO.OrderDtos
     public class DriverPagedDTO:PersonDTO
     {
         public decimal CommissionRate { get; set; }
-        public string Shift { get; set; } = string.Empty;
+        public Shift Shift { get; set; }
     }
 }

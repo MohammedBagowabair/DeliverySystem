@@ -23,10 +23,9 @@ namespace Infrastructure.Configurations.Validators
             builder.Property(order => order.DeliveryTime)
                    .IsRequired();  // This ensures DeliveryTime is not nullable; future validation is handled by business logic
 
-            // Configure PaymentMethod property
             builder.Property(order => order.PaymentMethod)
                    .IsRequired()
-                   .HasMaxLength(50);  // Setting a reasonable max length for the payment method string
+                   .HasMaxLength(50);  
 
             // Configure DeliveryFee property
             builder.Property(order => order.DeliveryFee)

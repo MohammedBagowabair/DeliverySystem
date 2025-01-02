@@ -35,6 +35,9 @@ namespace Application.Mappings
             CreateMap<Order, CreateUpdateOrderDTO>().ReverseMap();
             CreateMap<Customer, CustomerOrderPagedDTO>().ReverseMap();
             CreateMap<Driver, DriverPagedDTO>().ReverseMap();
+            CreateMap<User, UserDTO>().ReverseMap();
+            CreateMap<User, createUserDTO>().ReverseMap();
+            CreateMap<User, UpdateUserDTO>().ReverseMap();
 
 
 
