@@ -4,6 +4,7 @@ using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,8 +88,6 @@ namespace Application.Services
                 d => d.FullName.ToLower().Contains(searchTerm) || d.PhoneNumber1.Contains(searchTerm)
             );
         }
-
-
 
     }
 }

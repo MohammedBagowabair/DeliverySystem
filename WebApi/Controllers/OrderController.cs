@@ -182,5 +182,25 @@ namespace WebApi.Controllers
             }
         }
 
+
+        [HttpGet("GetDriverOrders")]
+        public async Task<ApiResultModel<PagedList<OrderDTO>>> GetDriverOrders(int driverId,string searchTerm, int page = 1, int pageSize = 10, DateTime? startDate=null,
+    DateTime? endDate=null)
+        {
+            try
+            {
+                var results = await _service.GetAllOrdersByDriverId(driverId,searchTerm, page, pageSize,startDate,endDate);
+                var mappedResults = _mapper.Map<PagedList<OrderDTO>>(results);
+                return new ApiResultModel<PagedList<OrderDTO>>(mappedResults);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(500, ex.Message, null);
+            }
+        }
     }
 }

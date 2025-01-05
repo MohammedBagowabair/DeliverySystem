@@ -18,8 +18,8 @@ namespace WebApi.Controllers
     public class DriverController : ControllerBase
     {
         private readonly IDriverService _service;
-        private readonly IMapper _mapper; 
-        public DriverController( IDriverService service, IMapper mapper)
+        private readonly IMapper _mapper;
+        public DriverController(IDriverService service, IMapper mapper)
         {
             _service = service;
             _mapper = mapper;
@@ -42,7 +42,7 @@ namespace WebApi.Controllers
             {
                 return new ApiResultModel<IEnumerable<DriverDTO>>(500, ex.Message, []);
             }
-            
+
         }
 
         [HttpGet]
@@ -59,7 +59,7 @@ namespace WebApi.Controllers
             {
                 return new ApiResultModel<DriverDTO>(ex.Code, ex.Message, null);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 return new ApiResultModel<DriverDTO>(500, ex.Message, null);
 
@@ -131,7 +131,7 @@ namespace WebApi.Controllers
                 //_logger.LogWarning(ex, "")
                 return new ApiResultModel<bool>(500, ex.Message, false);
             }
-            
+
         }
 
 
@@ -142,7 +142,7 @@ namespace WebApi.Controllers
             try
             {
 
-                return new ApiResultModel<PagedList<Driver>>( await _service.GetAllPagedAsync(page,pageSize));
+                return new ApiResultModel<PagedList<Driver>>(await _service.GetAllPagedAsync(page, pageSize));
 
             }
             catch (DeliveryCoreException ex)
@@ -176,6 +176,8 @@ namespace WebApi.Controllers
                 return new ApiResultModel<PagedList<DriverDTO>>(500, ex.Message, null);
             }
         }
+
+
 
     }
 }

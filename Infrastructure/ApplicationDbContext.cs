@@ -10,7 +10,7 @@ namespace Infrastructure
 {
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
-        //public DbContext DbContext => this;
+        public DbContext _dbContext => this;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
 
@@ -74,6 +74,21 @@ namespace Infrastructure
             var entities = await query.ToListAsync();
             return new PagedList<T>(count, entities, page, PageSize);
         }
+
+        //------------------------------------------Dashboard--------------------------------------------------
+        // Count quntity of any tables(total users,total drivers,total customers, and total orders)
+
+        public async Task<int> CountAsync<T>(Expression<Func<T, bool>> predicate = null) where T : BaseEntity
+        {
+            IQueryable<T> query = Set<T>();
+
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
+
+            return await query.CountAsync();
+        }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             new CustomerValidator().Configure(modelBuilder.Entity<Customer>());
@@ -83,5 +98,6 @@ namespace Infrastructure
             base.OnModelCreating(modelBuilder);
         }
 
+       
     }
 }

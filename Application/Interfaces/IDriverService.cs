@@ -21,5 +21,7 @@ namespace Application.Interfaces
         Task<PagedList<Driver>> GetAllPagedAsync(int page, int PageSize);
 
         Task<PagedList<Driver>> SearchDriversAsync(string searchTerm, int page, int pageSize);
+
+
     }
 }
