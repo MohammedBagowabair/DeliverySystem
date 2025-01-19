@@ -1,11 +1,16 @@
-﻿using Application.Common.Models;
+﻿using Application.Commands.Driver;
+using Application.Common.Models;
+using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
 using Application.Interfaces;
+using Application.Mappings;
+using Application.Queries.Driver;
 using AutoMapper;
 using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -19,10 +24,13 @@ namespace WebApi.Controllers
     {
         private readonly IDriverService _service;
         private readonly IMapper _mapper;
-        public DriverController(IDriverService service, IMapper mapper)
+        private readonly IMediator _mediator;
+
+        public DriverController(IDriverService service, IMapper mapper, IMediator mediator)
         {
             _service = service;
             _mapper = mapper;
+            _mediator = mediator;
         }
 
         [HttpGet("GetAll")]
@@ -31,8 +39,10 @@ namespace WebApi.Controllers
         {
             try
             {
-                var results = _mapper.Map<IEnumerable<DriverDTO>>(await _service.GetAll());
-                return new ApiResultModel<IEnumerable<DriverDTO>>(results);
+                GetAllDriversQuery getAllDriversQuery = new GetAllDriversQuery();
+                var result = await _mediator.Send(getAllDriversQuery);
+                var resultDTO = _mapper.Map<IEnumerable<DriverDTO>>(result);
+                return new ApiResultModel<IEnumerable<DriverDTO>>(resultDTO);
             }
             catch (DeliveryCoreException ex)
             {
@@ -51,9 +61,11 @@ namespace WebApi.Controllers
         {
             try
             {
-                var driver = await _service.GetById(id);
-                var result = _mapper.Map<DriverDTO>(driver);
-                return new ApiResultModel<DriverDTO>(result);
+                GetDriverByIdQuery getDriverByIdQuery = new GetDriverByIdQuery(id);
+                var result = await _mediator.Send(getDriverByIdQuery);
+
+                var resulDtot = _mapper.Map<DriverDTO>(result);
+                return new ApiResultModel<DriverDTO>(resulDtot);
             }
             catch (DeliveryCoreException ex)
             {
@@ -73,11 +85,13 @@ namespace WebApi.Controllers
         {
             try
             {
-                var driver = await _service.Create(_mapper.Map<Driver>(createDriverDTO));
+                var driver = _mapper.Map<Driver>(createDriverDTO);
+                CreateDriverCommand createDriverCommand = new (driver);
 
-                var result = _mapper.Map<CreateUpdateDriverDTO>(driver);
+                var result = await _mediator.Send(createDriverCommand);
+                var resultDriver= _mapper.Map<CreateUpdateDriverDTO>(result);
 
-                return new ApiResultModel<CreateUpdateDriverDTO>(result);
+                return new ApiResultModel<CreateUpdateDriverDTO>(resultDriver);
             }
             catch (DeliveryCoreException ex)
             {
@@ -96,7 +110,8 @@ namespace WebApi.Controllers
         {
             try
             {
-                var result = await _service.Delete(id);
+                DeleteDriverCommand deleteDriverCommand = new (id);
+                var result = await _mediator.Send(deleteDriverCommand);
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)
@@ -118,7 +133,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                await _service.Update(_mapper.Map<Driver>(createUpdateDriverDTO));
+                var driver = _mapper.Map<Driver>(createUpdateDriverDTO);
+                UpdateDriverCommand command = new (driver);
+               await  _mediator.Send(command);
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)
@@ -141,8 +158,10 @@ namespace WebApi.Controllers
         {
             try
             {
+                GetAllPagedDriversQuery getAllPagedDriversQuery = new (page, pageSize);
+                var result =await _mediator.Send(getAllPagedDriversQuery);
 
-                return new ApiResultModel<PagedList<Driver>>(await _service.GetAllPagedAsync(page, pageSize));
+                return new ApiResultModel<PagedList<Driver>>(result);
 
             }
             catch (DeliveryCoreException ex)
@@ -163,8 +182,10 @@ namespace WebApi.Controllers
         {
             try
             {
-                var results = await _service.SearchDriversAsync(searchTerm, page, pageSize);
-                var mappedResults = _mapper.Map<PagedList<DriverDTO>>(results);
+                GetAllSearchPagedDriversQuery getAllSearchPagedDriversQuery =new (searchTerm, page,pageSize);
+                var result = await _mediator.Send(getAllSearchPagedDriversQuery);
+
+                var mappedResults = _mapper.MapPagedList<Driver, DriverDTO>(result);
                 return new ApiResultModel<PagedList<DriverDTO>>(mappedResults);
             }
             catch (DeliveryCoreException ex)

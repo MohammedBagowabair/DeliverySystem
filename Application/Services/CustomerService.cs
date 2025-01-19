@@ -26,6 +26,7 @@ namespace Application.Services
         {
             return (await _dbContext.GetAsync<Customer>(x => x.Id == id))?.FirstOrDefault();
         }
+
         public async Task<Customer> Create(Customer customer)
         {
             var entity = (await _dbContext.GetAsync<Customer>(x => x.PhoneNumber1 == customer.PhoneNumber1))?.FirstOrDefault();
@@ -43,6 +44,7 @@ namespace Application.Services
         {
            return await _dbContext.DeleteAsync<Customer>(id);
         }
+
         public async Task<int> CountAsync()
         {
             var totalRecord = await GetAll();

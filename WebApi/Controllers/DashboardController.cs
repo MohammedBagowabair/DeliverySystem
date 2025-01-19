@@ -30,12 +30,31 @@ namespace WebApi.Controllers
 
 
         // Driver Revenue
-        [HttpGet("{driverId}/DriverRevenue")]
-        public async Task<ApiResultModel<decimal>> GetDriverProfit(int driverId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        [HttpGet("DriversProfit")]
+        public async Task<ApiResultModel<decimal>> GetDriverProfit(int ? driverId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
             {
-                var profit = await _service.CalculateDriverRevenueAsync(driverId, startDate, endDate);
+                var profit = await _service.CalculateDriverProfitAsync(driverId, startDate, endDate);
+                return new ApiResultModel<decimal>(profit);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<decimal>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<decimal>(500, ex.Message, 0);
+            }
+        }
+        // Profit
+
+        [HttpGet("GetProfit")]
+        public async Task<ApiResultModel<decimal>> GetProfit([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var profit = await _service.CalculateProfitAsync( startDate, endDate);
                 return new ApiResultModel<decimal>(profit);
             }
             catch (DeliveryCoreException ex)
@@ -48,7 +67,24 @@ namespace WebApi.Controllers
             }
         }
 
-
+        // Overall Revenue
+        [HttpGet("GetRevenue")]
+        public async Task<ApiResultModel<decimal>> GetRevenue( [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var revenue = await _service.CalculateRevenueAsync(startDate, endDate);
+                return new ApiResultModel<decimal>(revenue);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<decimal>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<decimal>(500, ex.Message, 0);
+            }
+        }
 
         // TotalUsers
         [HttpGet("TotalUsers")]
@@ -70,6 +106,47 @@ namespace WebApi.Controllers
             }
 
         }
+        [HttpGet("TotalActiveUsers")]
+        public async Task<ApiResultModel<int>> GetTotalActiveUsers()
+        {
+
+            try
+            {
+                var totalActiveUsers = await _service.GetActiveUsersAsync();
+                return new ApiResultModel<int>(totalActiveUsers);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+
+        }
+        [HttpGet("TotalinActiveUsers")]
+        public async Task<ApiResultModel<int>> GetTotalinActiveUsers()
+        {
+
+            try
+            {
+                var totalinActiveUsers = await _service.GetinActiveUsersAsync();
+                return new ApiResultModel<int>(totalinActiveUsers);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+
+        }
+
+
+
 
         // TotalDrivers
         [HttpGet("TotalDrivers")]
@@ -108,6 +185,10 @@ namespace WebApi.Controllers
                 return new ApiResultModel<int>(500, ex.Message, 0);
             }
         }
+
+
+
+
         // TotalOrders
         [HttpGet("TotalOrders")]
         public async Task<ApiResultModel<int>> GetTotalOrders()
@@ -126,5 +207,61 @@ namespace WebApi.Controllers
                 return new ApiResultModel<int>(500, ex.Message, 0);
             }
         }
+
+        // Dliveried Orders
+        [HttpGet("DliveriedOrders")]
+        public async Task<ApiResultModel<int>> GetDliveriedOrders()
+        {
+            try
+            {
+                var totalOrders = await _service.GetDliveriedOrdersAsync();
+                return new ApiResultModel<int>(totalOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        // Processing Orders
+        [HttpGet("ProcessingOrders")]
+        public async Task<ApiResultModel<int>> GetProcessingOrders()
+        {
+            try
+            {
+                var totalOrders = await _service.GetProcessingOrdersAsync();
+                return new ApiResultModel<int>(totalOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        // CancelledOrders Orders
+        [HttpGet("CancelledOrders")]
+        public async Task<ApiResultModel<int>> GetCancelledOrders()
+        {
+            try
+            {
+                var totalOrders = await _service.GetCancelledOrdersAsync();
+                return new ApiResultModel<int>(totalOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+
     }
 }

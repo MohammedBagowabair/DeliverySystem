@@ -1,11 +1,17 @@
-﻿using Application.Common.Models;
+﻿using Application.Commands.Customer;
+using Application.Commands.Order;
+using Application.Common.Models;
 using Application.DTO.CustomerDtos;
+using Application.Handlers.Customer.CommandHandler;
 using Application.Interfaces;
+using Application.Mappings;
+using Application.Queries.Customer;
 using AutoMapper;
 using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +24,13 @@ namespace WebApi.Controllers
     {
         private readonly ICustomerService _service;
         private readonly IMapper _mapper;
-        public CustomerController(ICustomerService service,IMapper mapper)
+        private readonly IMediator _mediator;
+
+        public CustomerController(ICustomerService service,IMapper mapper, IMediator mediator)
         {
             _service = service;
             _mapper = mapper;
+            _mediator = mediator;
         }
 
 
@@ -31,8 +40,11 @@ namespace WebApi.Controllers
         {
             try
             {
-                var results = _mapper.Map<IEnumerable<CustomerDTO>>(await _service.GetAll());
-                return new ApiResultModel<IEnumerable<CustomerDTO>>(results);
+                GetAllCustomersQuery getAllCustomersQuery = new GetAllCustomersQuery();
+                var result = await _mediator.Send(getAllCustomersQuery);
+
+                var resultDto = _mapper.Map<IEnumerable<CustomerDTO>>(await _service.GetAll());
+                return new ApiResultModel<IEnumerable<CustomerDTO>>(resultDto);
             }
             catch (DeliveryCoreException ex)
             {
@@ -53,8 +65,11 @@ namespace WebApi.Controllers
         {
             try
             {
-                var result = _mapper.Map<CustomerDTO>(await _service.GetById(id));
-                return new ApiResultModel<CustomerDTO>(result);
+                GetCustomerByIdQuery getCustomerByIdQuery = new (id);
+                var result = await _mediator.Send(getCustomerByIdQuery);
+
+                var resultDto = _mapper.Map<CustomerDTO>(result);
+                return new ApiResultModel<CustomerDTO>(resultDto);
             }
             catch (DeliveryCoreException ex)
             {
@@ -76,11 +91,13 @@ namespace WebApi.Controllers
            
             try
             {
-                var customer = await _service.Create(_mapper.Map<Customer>(createCustomerDTO));
+                var customer = _mapper.Map<Customer>(createCustomerDTO);
+                CreateCustomerCommand createCustomerCommand = new(customer);
+                var result = await _mediator.Send(createCustomerCommand);
 
-                var result= _mapper.Map<CreateUpdateCustomerDTO>(customer);
+                var resultCustomer= _mapper.Map<CreateUpdateCustomerDTO>(result);
 
-                return new ApiResultModel<CreateUpdateCustomerDTO>(result);
+                return new ApiResultModel<CreateUpdateCustomerDTO>(resultCustomer);
             }
             catch (DeliveryCoreException ex)
             {
@@ -100,7 +117,12 @@ namespace WebApi.Controllers
         {
             try
             {
-                await _service.Update(_mapper.Map<Customer>(createUpdateCustomerDTO));
+                var customer =  _mapper.Map<Customer>(createUpdateCustomerDTO);
+
+                UpdateCustomerCommand updateCustomerCommand = new (customer);
+
+                var result =   _mediator.Send(updateCustomerCommand);
+
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)
@@ -122,7 +144,8 @@ namespace WebApi.Controllers
         {
             try
             {
-                var result = await _service.Delete(id);
+                DeleteCustomerCommand deleteCustomerCommand = new (id);
+                var result= await _mediator.Send(deleteCustomerCommand);
                 return new ApiResultModel<bool>(result);
             }
             catch (DeliveryCoreException ex)
@@ -138,35 +161,39 @@ namespace WebApi.Controllers
             
         }
 
-        [HttpGet("GetCustomersPaged")]
-        public async Task<ApiResultModel<PagedList<Customer>>> GetCustomersPaged(int page = 1, int pageSize = 10)
-        {
-            try
-            {
+        //[HttpGet("GetCustomersPaged")]
+        //public async Task<ApiResultModel<PagedList<Customer>>> GetCustomersPaged(int page = 1, int pageSize = 10)
+        //{
+        //    try
+        //    {
+        //        GetAllPagedCustomersQuery getAllPagedCustomers = new(page,pageSize);
+        //        var result = await _mediator.Send(getAllPagedCustomers);
 
-                return new ApiResultModel<PagedList<Customer>>(await _service.GetAllPagedAsync(page, pageSize));
+        //        return new ApiResultModel<PagedList<Customer>>(result);
 
-            }
-            catch (DeliveryCoreException ex)
-            {
-                //  _logger.LogWarning(ex, "");
-                return new ApiResultModel<PagedList<Customer>>(ex.Code, ex.Message, null);
-            }
-            catch (Exception ex)
-            {
-                //_logger.LogWarning(ex, "")
-                return new ApiResultModel<PagedList<Customer>>(500, ex.Message, null);
-            }
+        //    }
+        //    catch (DeliveryCoreException ex)
+        //    {
+        //        //  _logger.LogWarning(ex, "");
+        //        return new ApiResultModel<PagedList<Customer>>(ex.Code, ex.Message, null);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //_logger.LogWarning(ex, "")
+        //        return new ApiResultModel<PagedList<Customer>>(500, ex.Message, null);
+        //    }
 
-        }
+        //}
 
         [HttpGet("SearchCustomers")]
         public async Task<ApiResultModel<PagedList<CustomerDTO>>> SearchCustomersAsync(string searchTerm, int page = 1, int pageSize = 10)
         {
             try
             {
-                var results = await _service.SearchCustomersAsync(searchTerm, page, pageSize);
-                var mappedResults = _mapper.Map<PagedList<CustomerDTO>>(results);
+                GetAllSearchPagedCustomersQuery getAllSearchPagedCustomersQuery = new(searchTerm, page, pageSize);
+                var result =await _mediator.Send(getAllSearchPagedCustomersQuery);
+
+                var mappedResults = _mapper.MapPagedList<Customer,CustomerDTO>(result);
                 return new ApiResultModel<PagedList<CustomerDTO>>(mappedResults);
             }
             catch (DeliveryCoreException ex)

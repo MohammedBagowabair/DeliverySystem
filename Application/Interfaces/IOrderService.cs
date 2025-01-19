@@ -11,8 +11,15 @@ namespace Application.Interfaces
         Task Update(Order order);
         Task<bool> Delete(int id);
         Task<PagedList<Order>> GetAllPagedAsync(int page, int PageSize);
-        Task<PagedList<Order>> SearchOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
         Task<PagedList<Order>> GetAllOrdersByDriverId(int driverId, string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
+        Task<PagedList<Order>> TodayOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
+
+        Task<PagedList<Order>> GetLastWeekOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
+        Task<PagedList<Order>> GetAllOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
+
+        Task<PagedList<Order>> GetPDFLastWeekOrdersAsync();
+
+
 
     }
 }

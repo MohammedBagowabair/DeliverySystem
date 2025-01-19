@@ -89,6 +89,8 @@ namespace Infrastructure
 
             return await query.CountAsync();
         }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             new CustomerValidator().Configure(modelBuilder.Entity<Customer>());
