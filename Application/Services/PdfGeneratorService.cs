@@ -18,11 +18,12 @@ namespace Application.Services
     public class PdfGeneratorService: IPdfGeneratorService
     {
 
-        public byte[] GenerateOrderPdf(List<Order> orders)
+        public byte[] GenerateOrderPdf(List<Order> orders, string reportMessage)
         {
             try
             {
                 using var memoryStream = new MemoryStream();
+                
 
                 // Create a PdfWriter to write the PDF into the memory stream
                 using var pdfWriter = new PdfWriter(memoryStream);
@@ -32,7 +33,7 @@ namespace Application.Services
                 var document = new Document(pdfDocument);
 
                 // Title of the document with smaller font size
-                document.Add(new Paragraph("Last 7 Days Orders")
+                document.Add(new Paragraph(reportMessage)
                     .SetTextAlignment(TextAlignment.CENTER)
                     .SetFontSize(14)); // Smaller font size
 

@@ -16,8 +16,16 @@ namespace Application.Interfaces
 
         Task<PagedList<Order>> GetLastWeekOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
         Task<PagedList<Order>> GetAllOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
-
         Task<PagedList<Order>> GetPDFLastWeekOrdersAsync();
+        Task<PagedList<Order>> GetPDFMonthWeekOrdersAsync();
+
+        Task<PagedList<Order>> LastMonthOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null);
+
+
+        // Count Today Orders
+        Task<int> GetTotalProcessingOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
+        Task<int> GetTotalDileveredOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
+        Task<int> GetTotalCanceledOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
 
 
 

@@ -9,6 +9,6 @@ namespace Application.Interfaces
 {
     public interface IPdfGeneratorService
     {
-        byte[] GenerateOrderPdf(List<Order> orders);
+        byte[] GenerateOrderPdf(List<Order> orders,string reportMessage);
     }
 }

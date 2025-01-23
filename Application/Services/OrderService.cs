@@ -145,11 +145,9 @@ namespace Application.Services
             // Normalize search term
             searchTerm = searchTerm?.Trim()?.ToLower();
 
-            // Set default date range for the last 7 days
-            DateTime start = startDate ?? DateTime.Today.AddDays(-7); // 7 days ago
-            DateTime end = endDate ?? DateTime.Today.AddDays(1);      // End of today (inclusive)
+            DateTime start = startDate ?? DateTime.Today.AddDays(-7);
+            DateTime end = endDate ?? DateTime.Now;
 
-            // Build the query
             var query = _dbContext._dbContext.Set<Order>()
                 .Include(order => order.Driver)
                 .Include(order => order.Customer)
@@ -158,7 +156,6 @@ namespace Application.Services
                     order.DeliveryTime < end &&
                     order.orderStatus == OrderStatus.Delivered);
 
-            // Apply search term if provided
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(order =>
@@ -182,41 +179,49 @@ namespace Application.Services
         }
         public async Task<PagedList<Order>> GetAllOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null)
         {
-            DateTime start = startDate ?? startDate.Value;
-            DateTime end = endDate ?? endDate.Value;
-            if (startDate == null && endDate == null)
+            try
             {
-                searchTerm = searchTerm?.Trim()?.ToLower();
-                if (string.IsNullOrEmpty(searchTerm))
+                DateTime start = startDate ?? startDate.Value;
+                DateTime end = endDate ?? endDate.Value;
+                if (startDate == null && endDate == null)
                 {
-                    //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
-                    return await _dbContext.GetPagedAsync<Order>(page, pageSize, null, ["Driver", "Customer"], true);
+                    searchTerm = searchTerm?.Trim()?.ToLower();
+                    if (string.IsNullOrEmpty(searchTerm))
+                    {
+                        //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
+                        return await _dbContext.GetPagedAsync<Order>(page, pageSize, null, ["Driver", "Customer"], true);
+                    }
+
+
+                    // Use predicate for search
+                    return await _dbContext.GetPagedAsync<Order>(
+                        page,
+                        pageSize, d => d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
+                    );
                 }
+                else
+                {
+                    // Normalize search term
+                    searchTerm = searchTerm?.Trim()?.ToLower();
+                    if (string.IsNullOrEmpty(searchTerm))
+                    {
+                        //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
+                        return await _dbContext.GetPagedAsync<Order>(page, pageSize, x => x.DeliveryTime >= start && x.DeliveryTime <= end, ["Driver", "Customer"], true);
+                    }
 
 
-                // Use predicate for search
-                return await _dbContext.GetPagedAsync<Order>(
-                    page,
-                    pageSize, d=>d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
-                );
+                    // Use predicate for search
+                    return await _dbContext.GetPagedAsync<Order>(
+                        page,
+                        pageSize, d => d.DeliveryTime >= start && d.DeliveryTime <= end || d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
+                    );
+                }
             }
-            else
+            catch (Exception e) 
             {
-                // Normalize search term
-                searchTerm = searchTerm?.Trim()?.ToLower();
-                if (string.IsNullOrEmpty(searchTerm))
-                {
-                    //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
-                    return await _dbContext.GetPagedAsync<Order>(page, pageSize, x => x.DeliveryTime >= start && x.DeliveryTime <= end, ["Driver", "Customer"], true);
-                }
-
-
-                // Use predicate for search
-                return await _dbContext.GetPagedAsync<Order>(
-                    page,
-                    pageSize, d => d.DeliveryTime >= start && d.DeliveryTime <= end || d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
-                );
+                throw new Exception(e.Message);
             }
+           
         }
 
         public async Task<PagedList<Order>> GetPDFLastWeekOrdersAsync()
@@ -224,16 +229,15 @@ namespace Application.Services
             try
             {
                 // Set default date range for the last 7 days
-                DateTime start = DateTime.Today.AddDays(-7); // 7 days ago
-                DateTime end = DateTime.Today.AddDays(1);    // End of today (inclusive)
-
+                DateTime start = DateTime.Today.AddDays(-7); // 7 days ago from the current moment
+                DateTime end = DateTime.Today.AddDays(2).AddTicks(-1);
                 // Build the query
                 var query = _dbContext._dbContext.Set<Order>()
                     .Include(order => order.Driver)
                     .Include(order => order.Customer)
                     .Where(order =>
                         order.DeliveryTime >= start &&
-                        order.DeliveryTime < end &&
+                        order.DeliveryTime <= end &&
                         order.orderStatus == OrderStatus.Delivered);
 
                 // Get all the orders within this period (no search term or pagination)
@@ -248,8 +252,105 @@ namespace Application.Services
                 throw new Exception("Error fetching orders: " + ex.Message);
             }
         }
+        public async Task<PagedList<Order>> GetPDFMonthWeekOrdersAsync()
+        {
+            try
+            {
+                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
+                DateTime end = DateTime.Today.AddDays(1);
+                // Build the query
+                var query = _dbContext._dbContext.Set<Order>()
+                    .Include(order => order.Driver)
+                    .Include(order => order.Customer)
+                    .Where(order =>
+                        order.DeliveryTime >= start &&
+                        order.DeliveryTime <= end &&
+                        order.orderStatus == OrderStatus.Delivered);
+
+                // Get all the orders within this period (no search term or pagination)
+                var orders = await query.ToListAsync();
+
+                // Return the list of orders in a paged format (with one page, containing all the records)
+                return new PagedList<Order>(orders.Count, orders, 1, orders.Count); // Return all orders as a single page
+            }
+            catch (Exception ex)
+            {
+                // Handle errors, if any
+                throw new Exception("Error fetching orders: " + ex.Message);
+            }
+        }
+        public async Task<PagedList<Order>> LastMonthOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            // Normalize search term
+            searchTerm = searchTerm?.Trim()?.ToLower();
+
+            // Default to today's orders
+            DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
+            DateTime end = DateTime.Today.AddDays(1);
+
+            // Build the query
+            var query = _dbContext._dbContext.Set<Order>()
+                .Include(order => order.Driver)
+                .Include(order => order.Customer)
+                .Where(order =>
+                    order.DeliveryTime >= start &&
+                    order.DeliveryTime < end
+                    );
+
+            // Apply search term if provided
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(order =>
+                    order.Customer.FullName.ToLower().Contains(searchTerm) ||
+                    order.Driver.FullName.ToLower().Contains(searchTerm) ||
+                    order.Title.ToLower().Contains(searchTerm));
+            }
+
+            // Get total count for pagination
+            int totalCount = await query.CountAsync();
+
+            // Apply pagination
+            var orders = await query
+                .OrderBy(order => order.Id) // Use OrderByDescending if needed
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Return the paged list
+            return new PagedList<Order>(totalCount, orders, page, pageSize);
+        }
 
 
+        public async Task<int> GetTotalProcessingOrdersAsync(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            DateTime? Start = startDate;
+            DateTime? End = endDate;
+
+            return await _dbContext.CountAsync<Order>(
+                order => order.orderStatus == OrderStatus.Processing &&
+                         order.DeliveryTime >= Start &&
+                         order.DeliveryTime <= End);
+        }
+        public async Task<int> GetTotalDileveredOrdersAsync(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            DateTime? Start = startDate;
+            DateTime? End = endDate;
+
+            return await _dbContext.CountAsync<Order>(
+                order => order.orderStatus == OrderStatus.Delivered &&
+                          order.DeliveryTime >= Start &&
+                         order.DeliveryTime <= End);
+        }
+        public async Task<int> GetTotalCanceledOrdersAsync(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            DateTime? Start = startDate;
+            DateTime? End = endDate;
+
+            return await _dbContext.CountAsync<Order>(
+                order => order.orderStatus == OrderStatus.Canceled &&
+                          order.DeliveryTime >= Start &&
+                         order.DeliveryTime <= End);
+        }
 
 
     }

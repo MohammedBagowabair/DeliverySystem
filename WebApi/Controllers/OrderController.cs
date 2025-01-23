@@ -255,11 +255,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAllOrders")]
-        public async Task<ApiResultModel<PagedList<OrderDTO>>> GetAllOrders(string searchTerm, int page = 1, int pageSize = 10,
-
-
-            [FromQuery] DateTime? startDate = null,
-    [FromQuery] DateTime? endDate = null)
+        public async Task<ApiResultModel<PagedList<OrderDTO>>> GetAllOrders(string searchTerm, int page = 1, int pageSize = 10,[FromQuery] DateTime? startDate = null,[FromQuery] DateTime? endDate = null)
 
         {
             try
@@ -294,7 +290,7 @@ namespace WebApi.Controllers
                 }
 
                 // Generate the PDF using the PdfGeneratorService
-                var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(pagedOrders.Entities);
+                var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(pagedOrders.Entities, "Last Week Report");
 
                 // Return the PDF as a file to the client
                 return File(pdfBytes, "application/pdf", "LastWeekOrders.pdf");
@@ -306,6 +302,180 @@ namespace WebApi.Controllers
             }
         }
 
+        [HttpGet("download-LastMonth-pdf")]
+        public async Task<IActionResult> DownloadLastMonthPdf()
+        {
+            try
+            {
+                // Fetch the orders from the service
+                var pagedOrders = await _service.GetPDFMonthWeekOrdersAsync();
+
+                if (pagedOrders?.Entities == null || !pagedOrders.Entities.Any())
+                {
+                    // If no orders are found, return a "Not Found" response
+                    return NotFound("No orders found.");
+                }
+
+                // Generate the PDF using the PdfGeneratorService
+                var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(pagedOrders.Entities,"Last Month Report");
+
+                // Return the PDF as a file to the client
+                return File(pdfBytes, "application/pdf", "LastMonthOrders.pdf");
+            }
+            catch (Exception ex)
+            {
+                // If any error occurs during PDF generation, return a server error response
+                return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
+            }
+        }
+
+
+        [HttpGet("LastMonthOrders")]
+        public async Task<ApiResultModel<PagedList<OrderDTO>>> LastMonthOrders(string searchTerm, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var results = await _service.LastMonthOrdersAsync(searchTerm, page, pageSize);
+                var mappedResults = _mapper.Map<PagedList<OrderDTO>>(results);
+                return new ApiResultModel<PagedList<OrderDTO>>(mappedResults);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(ex.Code, ex.Message, null);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<PagedList<OrderDTO>>(500, ex.Message, null);
+            }
+        }
+
+
+        // Count Today Orders [Processing-Canceled-Dlivered]
+
+        [HttpGet("TotalProcessingOrdersToday")]
+        public async Task<ApiResultModel<int>> GetProcessingOrdersToday()
+        {
+            try
+            {
+                DateTime todayStart = DateTime.Today;
+                DateTime todayEnd = DateTime.Today.AddDays(1).AddTicks(-1);
+
+                var totalProcessingOrders = await _service.GetTotalProcessingOrdersAsync(todayStart, todayEnd);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalDliveredOrdersToday")]
+        public async Task<ApiResultModel<int>> GetDliveredOrdersToday()
+        {
+            try
+            {
+                DateTime todayStart = DateTime.Today;
+                DateTime todayEnd = DateTime.Today.AddDays(1).AddTicks(-1);
+                var totalProcessingOrders = await _service.GetTotalDileveredOrdersAsync(todayStart, todayEnd);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalCanceledOrdersToday")]
+        public async Task<ApiResultModel<int>> GetCanceledOrdersToday()
+        {
+            try
+            {
+                DateTime todayStart = DateTime.Today;
+                DateTime todayEnd = DateTime.Today.AddDays(1).AddTicks(-1);
+                var totalProcessingOrders = await _service.GetTotalCanceledOrdersAsync(todayStart, todayEnd);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+
+        // Count Last Month Orders [Processing-Canceled-Dlivered]
+
+        [HttpGet("TotalProcessingOrdersLastMonth")]
+        public async Task<ApiResultModel<int>> GetProcessingOrdersLastMonth()
+        {
+            try
+            {
+                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
+                DateTime end = DateTime.Today.AddDays(1);
+
+
+                var totalProcessingOrders = await _service.GetTotalProcessingOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalDliveredOrdersLastMonth")]
+        public async Task<ApiResultModel<int>> GetDliveredOrdersLastMonth()
+        {
+            try
+            {
+                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
+                DateTime end = DateTime.Today.AddDays(1);
+
+                var totalProcessingOrders = await _service.GetTotalDileveredOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalCanceledOrdersLastMonth")]
+        public async Task<ApiResultModel<int>> GetCanceledOrdersLastMonth()
+        {
+            try
+            {
+                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
+                DateTime end = DateTime.Today.AddDays(1);
+
+                var totalProcessingOrders = await _service.GetTotalCanceledOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+
+   
 
 
     }
