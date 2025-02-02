@@ -1,4 +1,7 @@
-﻿using Application.DTO.OrderDtos;
+﻿using Application.DTO.CustomerDtos;
+using Application.DTO.DriverDtos;
+using Application.DTO.OrderDtos;
+using Application.DTO.ReportsDto;
 using Application.Interfaces;
 using Domain.Common.Models;
 using Domain.Constants;
@@ -6,7 +9,10 @@ using Domain.Entities;
 using iText.Kernel.Pdf;
 using iText.Layout.Element;
 using iText.Layout.Properties;
+using iText.StyledXmlParser.Jsoup.Nodes;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using System.Reflection.Metadata;
 
 namespace Application.Services
@@ -146,7 +152,7 @@ namespace Application.Services
             searchTerm = searchTerm?.Trim()?.ToLower();
 
             DateTime start = startDate ?? DateTime.Today.AddDays(-7);
-            DateTime end = endDate ?? DateTime.Now;
+            DateTime end = DateTime.Today.AddDays(1);
 
             var query = _dbContext._dbContext.Set<Order>()
                 .Include(order => order.Driver)
@@ -350,6 +356,224 @@ namespace Application.Services
                 order => order.orderStatus == OrderStatus.Canceled &&
                           order.DeliveryTime >= Start &&
                          order.DeliveryTime <= End);
+        }
+
+        // Filtered Data
+
+        public async Task<PagedList<Order>> GetAllOrdersFiltredAsync(
+    int page,
+    int pageSize,
+    string searchTerm = null,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    string SelectedDriver = null,
+    OrderStatus? SelectedStatus = null)
+        {
+            try
+            {
+                // Default to MinValue and MaxValue if dates are null
+                DateTime start = startDate ?? DateTime.MinValue;
+                DateTime end = endDate ?? DateTime.MaxValue;
+
+                // Normalize search term
+                searchTerm = searchTerm?.Trim()?.ToLower();
+
+                // Build filter predicate dynamically
+                var predicate = PredicateBuilder.New<Order>(true);
+
+                // Apply filters based on provided parameters
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    predicate = predicate.And(order =>
+                        order.Customer.FullName.ToLower().Contains(searchTerm) ||
+                        order.Driver.FullName.ToLower().Contains(searchTerm) ||
+                        order.Title.ToLower().Contains(searchTerm));
+                }
+
+                predicate = predicate.And(order => order.DeliveryTime >= start && order.DeliveryTime <= end);
+
+                if (!string.IsNullOrEmpty(SelectedDriver))
+                {
+                    predicate = predicate.And(order => order.Driver.Id.ToString() == SelectedDriver);
+                }
+
+                if (SelectedStatus.HasValue)
+                {
+                    predicate = predicate.And(order => order.orderStatus == SelectedStatus.Value);
+                }
+
+                // Query the database using the predicate and include related entities
+                var pagedOrders = await _dbContext.GetPagedAsync<Order>(
+                    page,
+                    pageSize,
+                    predicate,
+                    new[] { "Driver", "Customer" }, // Include related entities
+                    true
+                );
+
+                // Map to DTOs
+                var pagedOrderDTOs = new PagedList<Order>(
+                    pagedOrders.TotalCount,
+                    pagedOrders.Entities.Select(order => new Order
+                    {
+                        Id = order.Id,
+                        Title = order.Title,
+                        FinalPrice = order.FinalPrice,
+                        DeliveryTime = order.DeliveryTime,
+                        DeliveryFee = order.DeliveryFee,
+                        CouponDiscount = order.CouponDiscount,
+                        orderStatus = order.orderStatus,
+                        PaymentMethod = order.PaymentMethod,
+                        Customer = new Customer
+                        {
+                            Id = order.Customer.Id,
+                            FullName = order.Customer.FullName,
+                        },
+                        Driver = new Driver
+                        {
+                            Id = order.Driver.Id,
+                            FullName = order.Driver.FullName,
+                        }
+                    }).ToList(),
+                    page,
+                    pageSize
+                );
+
+                return pagedOrderDTOs;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("jh");
+            }
+        }
+
+
+
+
+        public async Task<DriverReportResult> GetDriverReportsAsync(
+        int? driverId, // Filter by Driver ID
+        int page,
+        int pageSize,
+        string searchTerm = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        int? SelectedDriver = null,
+        OrderStatus? SelectedStatus = null)
+        {
+            try
+            {
+                // Default to MinValue and MaxValue if dates are null
+                DateTime start = startDate ?? DateTime.MinValue;
+                DateTime end = endDate ?? DateTime.MaxValue;
+
+                // Normalize search term
+                searchTerm = searchTerm?.Trim()?.ToLower();
+
+                // Build filter predicate dynamically
+                var predicate = PredicateBuilder.New<Order>(true);
+
+                // Filter by Driver ID if provided
+                if (driverId.HasValue)
+                {
+                    predicate = predicate.And(order => order.Driver.Id == SelectedDriver.Value);
+                }
+
+                // Apply search filters
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    predicate = predicate.And(order =>
+                        order.Customer.FullName.ToLower().Contains(searchTerm) ||
+                        order.Driver.FullName.ToLower().Contains(searchTerm) ||
+                        order.Title.ToLower().Contains(searchTerm));
+                }
+
+                predicate = predicate.And(order => order.DeliveryTime >= start && order.DeliveryTime <= end);
+
+                if (!string.IsNullOrEmpty(SelectedDriver.ToString()))
+                {
+                    predicate = predicate.And(order => order.Driver.Id == SelectedDriver);
+                }
+
+                if (SelectedStatus.HasValue)
+                {
+                    predicate = predicate.And(order => order.orderStatus == SelectedStatus.Value);
+                }
+
+                // Query the database using the predicate and include related entities
+                var pagedOrders = await _dbContext.GetPagedAsync<Order>(
+                    page,
+                    pageSize,
+                    predicate,
+                    new[] { "Driver", "Customer" }, // Include related entities
+                    true
+                );
+
+                // Calculate Driver Profit
+                decimal driverProfit = await _dbContext._dbContext.Set<Order>()
+                    .Where(order =>
+                        (!SelectedDriver.HasValue || order.DriverId == SelectedDriver) &&
+                        order.orderStatus == OrderStatus.Delivered &&
+                        order.DeliveryTime >= start &&
+                        order.DeliveryTime <= end
+                    )
+                    .SumAsync(order => order.FinalPrice * order.Driver.CommissionRate / 100);
+
+                // Calculate Company Revenue
+                decimal companyRevenue = await _dbContext._dbContext.Set<Order>()
+                    .Where(order =>
+                        order.orderStatus == OrderStatus.Delivered &&
+                        order.DeliveryTime >= start &&
+                        order.DeliveryTime <= end
+                    )
+                    .SumAsync(order => order.FinalPrice);
+
+                // Calculate Company Profit
+                decimal companyProfit = await _dbContext._dbContext.Set<Order>()
+                    .Where(order =>
+                        order.orderStatus == OrderStatus.Delivered &&
+                        order.DeliveryTime >= start &&
+                        order.DeliveryTime <= end
+                    )
+                    .SumAsync(order => order.FinalPrice - (order.FinalPrice * order.Driver.CommissionRate / 100));
+
+                // Map to DTOs
+                var pagedOrderDTOs = new PagedList<Order>(
+                    pagedOrders.TotalCount,
+                    pagedOrders.Entities.Select(order => new Order
+                    {
+                        Id = order.Id,
+                        Title = order.Title,
+                        FinalPrice = order.FinalPrice,
+                        DeliveryTime = order.DeliveryTime,
+                        orderStatus = order.orderStatus,
+                        PaymentMethod = order.PaymentMethod,
+                        Customer = new Customer
+                        {
+                            Id = order.Customer.Id,
+                            FullName = order.Customer.FullName,
+                        },
+                        Driver = new Driver
+                        {
+                            Id = order.Driver.Id,
+                            FullName = order.Driver.FullName,
+                        }
+                    }).ToList(),
+                    page,
+                    pageSize
+                );
+
+                return new DriverReportResult
+                {
+                    Orders = pagedOrderDTOs,
+                    DriverProfit = driverProfit,
+                    CompanyRevenue = companyRevenue,
+                    CompanyProfit = companyProfit
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("An error occurred while fetching driver reports.", ex);
+            }
         }
 
 

@@ -1,4 +1,7 @@
-﻿using Domain.Common.Models;
+﻿using Application.DTO.OrderDtos;
+using Application.DTO.ReportsDto;
+using Domain.Common.Models;
+using Domain.Constants;
 using Domain.Entities;
 
 namespace Application.Interfaces
@@ -26,6 +29,11 @@ namespace Application.Interfaces
         Task<int> GetTotalProcessingOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<int> GetTotalDileveredOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<int> GetTotalCanceledOrdersAsync(DateTime? startDate = null, DateTime? endDate = null);
+
+        //Filtered Data
+        Task<PagedList<Order>> GetAllOrdersFiltredAsync(int page,int pageSize,string? searchTerm = null,DateTime? startDate = null,DateTime? endDate = null,string? SelectedDriver = null,OrderStatus? SelectedStatus = null);
+        Task<DriverReportResult> GetDriverReportsAsync(int? id ,int page,int pageSize,string? searchTerm = null,DateTime? startDate = null,DateTime? endDate = null,int? SelectedDriver = null,OrderStatus? SelectedStatus = null);
+
 
 
 
