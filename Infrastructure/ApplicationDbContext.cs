@@ -53,8 +53,16 @@ namespace Infrastructure
         }
         public async Task UpdateAsync<T>(T entity) where T : BaseEntity
         {
-            Set<T>().Update(entity);
-            await SaveChangesAsync();
+            try
+            {
+                Set<T>().Update(entity);
+                await SaveChangesAsync();
+            }
+            catch(Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+          
         }
         public async Task<PagedList<T>> GetPagedAsync<T>(int page, int PageSize, System.Linq.Expressions.Expression<Func<T, bool>> predicate = null, string[] includes = null, bool IsOrde = false) where T : BaseEntity
         {

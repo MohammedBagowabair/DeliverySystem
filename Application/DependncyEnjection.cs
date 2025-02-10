@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Application.Interfaces;
+using Application.Services;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +18,19 @@ namespace Application
             {
                 configuration.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly());
             });
+
+
+
+            //services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+            //services.AddScoped<IOrderService, OrderService>();
+            //services.AddScoped<IDriverService, DriverService>();
+            //services.AddScoped<ICustomerService, CustomerService>();
+            //services.AddScoped<IUserService, UserService>();
+            //services.AddScoped<IDashboardService, DashboardService>();
+            //services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
+
+
+
             return services;
 
         }

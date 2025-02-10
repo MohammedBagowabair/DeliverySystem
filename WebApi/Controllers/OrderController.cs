@@ -102,7 +102,6 @@ namespace WebApi.Controllers
             try
             {
                 var order = _mapper.Map<Order>(createOrderDTO);
-
                 CreateOrderCommand createOrderCommand = new CreateOrderCommand(order);
 
                 var result = await _mediator.Send(createOrderCommand);
@@ -147,13 +146,13 @@ namespace WebApi.Controllers
         }
         [HttpPut]
         //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
-        public async Task<ApiResultModel<bool>> UpdateAsync(UpdateOrderDTO updateOrderDTO)
+        public async Task<ApiResultModel<bool>> UpdateAsync(OrderDTO updateOrderDTO)
         {
             try
             {
                 var order = _mapper.Map<Order>(updateOrderDTO);
                 UpdateOrderCommand command = new UpdateOrderCommand(order);
-                var result = _mediator.Send(command);
+                await _mediator.Send(command);
                 return new ApiResultModel<bool>(true);
             }
             catch (DeliveryCoreException ex)

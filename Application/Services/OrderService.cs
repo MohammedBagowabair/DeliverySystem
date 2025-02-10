@@ -1,30 +1,22 @@
-﻿using Application.DTO.CustomerDtos;
-using Application.DTO.DriverDtos;
-using Application.DTO.OrderDtos;
+﻿
 using Application.DTO.ReportsDto;
 using Application.Interfaces;
 using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
-using iText.Kernel.Pdf;
-using iText.Layout.Element;
-using iText.Layout.Properties;
-using iText.StyledXmlParser.Jsoup.Nodes;
 using LinqKit;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
-using System.Reflection.Metadata;
 
 namespace Application.Services
 {
     public class OrderService : IOrderService
     {
-        public IApplicationDbContext _dbContext;
+        public  IApplicationDbContext _dbContext;
         public OrderService(IApplicationDbContext dbContext)
         {
             _dbContext = dbContext;
         }
-
+        
         public async Task<IEnumerable<Order>> GetAll()
         {
             return await _dbContext.GetAsync<Order>();
@@ -42,7 +34,34 @@ namespace Application.Services
         }
         public async Task Update(Order order)
         {
-            await _dbContext.UpdateAsync<Order>(order);
+            //try
+            //{
+
+            //    if (order.orderStatus == OrderStatus.Processing)
+            //    {
+            //        order.orderStatus = OrderStatus.Processing;
+            //    }
+            //    if (order.orderStatus == OrderStatus.Delivered)
+            //    {
+            //        order.orderStatus = OrderStatus.Delivered;
+
+            //    }
+            //    if (order.orderStatus == OrderStatus.Canceled)
+            //    {
+            //        order.orderStatus = OrderStatus.Canceled;
+            //    }
+
+              _dbContext._dbContext.Set<Order>().Update(order);
+              await  _dbContext._dbContext.SaveChangesAsync();
+               // throw new Exception("nkn");
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    throw new Exception(ex.Message);s
+            //}
+            
+           
         }
         public async Task<bool> Delete(int id)
         {
@@ -424,6 +443,7 @@ namespace Application.Services
                         CouponDiscount = order.CouponDiscount,
                         orderStatus = order.orderStatus,
                         PaymentMethod = order.PaymentMethod,
+                        Notice=order.Notice,
                         Customer = new Customer
                         {
                             Id = order.Customer.Id,
@@ -547,6 +567,7 @@ namespace Application.Services
                         DeliveryTime = order.DeliveryTime,
                         orderStatus = order.orderStatus,
                         PaymentMethod = order.PaymentMethod,
+                        Notice=order.Notice,
                         Customer = new Customer
                         {
                             Id = order.Customer.Id,

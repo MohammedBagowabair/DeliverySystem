@@ -121,7 +121,7 @@ namespace WebApi.Controllers
 
                 UpdateCustomerCommand updateCustomerCommand = new (customer);
 
-                var result =   _mediator.Send(updateCustomerCommand);
+                 await   _mediator.Send(updateCustomerCommand);
 
                 return new ApiResultModel<bool>(true);
             }

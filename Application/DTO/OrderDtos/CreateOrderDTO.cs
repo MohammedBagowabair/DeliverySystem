@@ -36,7 +36,6 @@ namespace Application.DTO.OrderDtos
         public decimal FinalPrice { get; set; }
 
         public OrderStatus orderStatus { get; set; }
-        [Required(ErrorMessage = "Title is Required")]
 
         [StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
         public string Title { get; set; } = string.Empty;

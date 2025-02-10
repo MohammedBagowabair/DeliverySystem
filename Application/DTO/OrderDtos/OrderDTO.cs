@@ -15,34 +15,30 @@ namespace Application.DTO.OrderDtos
     public class OrderDTO : BaseEntityDTO
     {
 
-        [Required(ErrorMessage = "Customer Id is required.")]
+
+
         public int CustomerId { get; set; }
-        public CustomerOrderPagedDTO Customer { get; set; }
+        public CustomerOrderPagedDTO? Customer { get; set; }
 
 
-        [Required(ErrorMessage = "Driver Id is required.")]
         public int DriverId { get; set; }
-        public DriverPagedDTO Driver { get; set; }
+        public DriverPagedDTO? Driver { get; set; }
 
 
         public DateTime DeliveryTime { get; set; }
 
-        [Required(ErrorMessage = "Choose Payment method")]
         public PaymentMethod paymentMethod { get; set; }
 
-        [Required]
         [Range(0, double.MaxValue, ErrorMessage = "Delivery fee must be a positive number.")]
         public decimal DeliveryFee { get; set; }
 
         [Range(0, 100, ErrorMessage = "Coupon discount must be between 0 and 100 percent.")]
         public decimal CouponDiscount { get; set; }
 
-        [Required]
         [Range(0, double.MaxValue, ErrorMessage = "Final price must be a positive number.")]
         public decimal FinalPrice { get; set; }
 
         public OrderStatus orderStatus { get; set; }
-        [Required(ErrorMessage = "Title is Required")]
 
         [StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
         public string Title { get; set; } = string.Empty;
