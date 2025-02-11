@@ -528,67 +528,66 @@ namespace Application.Services
                     true
                 );
 
-                // Calculate Driver Profit
-                decimal driverProfit = await _dbContext._dbContext.Set<Order>()
-                    .Where(order =>
-                        (!SelectedDriver.HasValue || order.DriverId == SelectedDriver) &&
-                        order.orderStatus == OrderStatus.Delivered &&
-                        order.DeliveryTime >= start &&
-                        order.DeliveryTime <= end
-                    )
-                    .SumAsync(order => order.FinalPrice * order.Driver.CommissionRate / 100);
-
-                // Calculate Company Revenue
-                decimal companyRevenue = await _dbContext._dbContext.Set<Order>()
+                // Query to get delivered orders within the given day
+                var query = _dbContext._dbContext.Set<Order>()
                     .Where(order =>
                         order.orderStatus == OrderStatus.Delivered &&
                         order.DeliveryTime >= start &&
                         order.DeliveryTime <= end
-                    )
-                    .SumAsync(order => order.FinalPrice);
+                    );
 
-                // Calculate Company Profit
-                decimal companyProfit = await _dbContext._dbContext.Set<Order>()
-                    .Where(order =>
-                        order.orderStatus == OrderStatus.Delivered &&
-                        order.DeliveryTime >= start &&
-                        order.DeliveryTime <= end
-                    )
-                    .SumAsync(order => order.FinalPrice - (order.FinalPrice * order.Driver.CommissionRate / 100));
+                // If a specific driver is selected, filter orders by that driver
+                if (SelectedDriver.HasValue)
+                {
+                    query = query.Where(order => order.DriverId == SelectedDriver);
+                }
 
-                // Map to DTOs
+                // Calculate total revenue from the filtered orders
+                decimal totalRevenue = await query.SumAsync(order => order.FinalPrice);
+
+                // Calculate driver profit (70% of revenue from their orders)
+                decimal driverProfit = totalRevenue * 0.7m;
+
+                // Calculate company profit (30% of revenue from the same orders)
+                decimal companyProfit = totalRevenue * 0.3m;
+
+
+
+
+
+                //Map to DTOs
                 var pagedOrderDTOs = new PagedList<Order>(
-                    pagedOrders.TotalCount,
-                    pagedOrders.Entities.Select(order => new Order
-                    {
-                        Id = order.Id,
-                        Title = order.Title,
-                        FinalPrice = order.FinalPrice,
-                        DeliveryTime = order.DeliveryTime,
-                        orderStatus = order.orderStatus,
-                        PaymentMethod = order.PaymentMethod,
-                        Notice=order.Notice,
-                        Customer = new Customer
-                        {
-                            Id = order.Customer.Id,
-                            FullName = order.Customer.FullName,
-                        },
-                        Driver = new Driver
-                        {
-                            Id = order.Driver.Id,
-                            FullName = order.Driver.FullName,
-                        }
-                    }).ToList(),
-                    page,
-                    pageSize
-                );
+                   pagedOrders.TotalCount,
+                   pagedOrders.Entities.Select(order => new Order
+                   {
+                       Id = order.Id,
+                       Title = order.Title,
+                       FinalPrice = order.FinalPrice,
+                       DeliveryTime = order.DeliveryTime,
+                       orderStatus = order.orderStatus,
+                       PaymentMethod = order.PaymentMethod,
+                       Notice = order.Notice,
+                       Customer = new Customer
+                       {
+                           Id = order.Customer.Id,
+                           FullName = order.Customer.FullName,
+                       },
+                       Driver = new Driver
+                       {
+                           Id = order.Driver.Id,
+                           FullName = order.Driver.FullName,
+                       }
+                   }).ToList(),
+                   page,
+                   pageSize
+               );
 
                 return new DriverReportResult
                 {
                     Orders = pagedOrderDTOs,
                     DriverProfit = driverProfit,
-                    CompanyRevenue = companyRevenue,
-                    CompanyProfit = companyProfit
+                    CompanyProfit = companyProfit,
+                    CompanyRevenue = totalRevenue
                 };
             }
             catch (Exception ex)
