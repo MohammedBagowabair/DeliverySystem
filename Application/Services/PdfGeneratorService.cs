@@ -1,7 +1,12 @@
-﻿using Application.DTO.OrderDtos;
+﻿
+
+
+using Application.DTO.OrderDtos;
 using Application.Interfaces;
 using Domain.Entities;
+using iText.IO.Font;
 using iText.Kernel.Colors;
+using iText.Kernel.Font;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Borders;
@@ -15,15 +20,16 @@ using System.Threading.Tasks;
 
 namespace Application.Services
 {
-    public class PdfGeneratorService: IPdfGeneratorService
+    public class PdfGeneratorService : IPdfGeneratorService
     {
+
 
         public byte[] GenerateOrderPdf(List<Order> orders, string reportMessage)
         {
             try
             {
                 using var memoryStream = new MemoryStream();
-                
+
 
                 // Create a PdfWriter to write the PDF into the memory stream
                 using var pdfWriter = new PdfWriter(memoryStream);
@@ -80,7 +86,7 @@ namespace Application.Services
             }
         }
 
-        public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName,  decimal driverProfit, decimal companyRevenue, decimal companyProfit,DateTime? startDate= null, DateTime? endDate = null)
+        public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
         {
             try
             {

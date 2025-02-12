@@ -21,6 +21,7 @@ using MediatR;
 using Application.Commands.Order;
 using Application.Queries.Order;
 using Application.Commands.Customer;
+using Application.DTO.ReportsDto;
 
 namespace WebApi.Controllers
 {
@@ -567,6 +568,47 @@ namespace WebApi.Controllers
                 return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
             }
         }
+
+
+
+
+        [HttpGet("GetProfitA-Revenu")]
+        public async Task<ApiResultModel<DriverReportResult>> GetProfitAndRevenu(int? DriverId, string searchTerm = null, int page = 1, int pageSize = 5, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
+        {
+            try
+            {
+                DateTime? start = startDate;
+                DateTime? end = endDate;
+                // Fetch the orders from the service
+                var results = await _service.GetDriverReportsAsync(DriverId, page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
+
+                decimal driverProfit = results.DriverProfit;
+                decimal companyRevenue = results.CompanyRevenue;
+                decimal companyProfit = results.CompanyProfit;
+
+                if (results?.Orders.Entities != null || !results.Orders.Entities.Any())
+                {
+                    return new ApiResultModel<DriverReportResult>(results);
+                }
+                else
+                {
+                    throw new Exception("We did not found anything.");
+
+                }
+            }
+            catch(Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+            
+               
+
+
+
+
+        }
+
+        
     }
 
    
