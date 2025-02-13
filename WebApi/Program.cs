@@ -91,6 +91,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPdfGeneratorService,PdfGeneratorService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<WeeklyDateRange>();
+
 
 
 //builder.Services.AddMediatR(configuration =>

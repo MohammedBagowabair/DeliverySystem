@@ -29,20 +29,20 @@ namespace WebApi.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
+        private readonly WeeklyDateRange _weeklyDateRange;
         public IOrderService _service;
         public IMapper _mapper;
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly IMediator _mediator ;
 
 
-        public OrderController(IMediator mediator,IOrderService service, IMapper mapper, IPdfGeneratorService pdfGeneratorService)
+        public OrderController(IMediator mediator,IOrderService service, IMapper mapper, IPdfGeneratorService pdfGeneratorService, WeeklyDateRange weeklyDateRange)
         {
             _mediator = mediator;
             _service = service;
             _mapper = mapper;
             _pdfGeneratorService = pdfGeneratorService;
-
-
+            _weeklyDateRange = weeklyDateRange;
         }
 
         [HttpGet("GetAll")]
@@ -192,8 +192,6 @@ namespace WebApi.Controllers
             }
 
         }
-
-
 
 
         [HttpGet("GetDriverOrders")]
@@ -411,6 +409,77 @@ namespace WebApi.Controllers
             }
         }
 
+
+
+        // Count Last Week Orders [Processing-Canceled-Dlivered]
+
+        [HttpGet("TotalProcessingOrdersLastWeek")]
+        public async Task<ApiResultModel<int>> GetProcessingOrdersLastWeek()
+        {
+            try
+            {
+                DateTime start =_weeklyDateRange.StartDate;
+                DateTime end = _weeklyDateRange.EndDate;
+
+
+
+                var totalProcessingOrders = await _service.GetTotalProcessingOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalDliveredOrdersLastWeek")]
+        public async Task<ApiResultModel<int>> GetDliveredOrdersLastWeek()
+        {
+            try
+            {
+                DateTime start = _weeklyDateRange.StartDate;
+                DateTime end = _weeklyDateRange.EndDate;
+
+
+                var totalProcessingOrders = await _service.GetTotalDileveredOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+        [HttpGet("TotalCanceledOrdersLastWeek")]
+        public async Task<ApiResultModel<int>> GetCanceledOrdersLastWeek()
+        {
+            try
+            {
+                DateTime start = _weeklyDateRange.StartDate;
+                DateTime end = _weeklyDateRange.EndDate;
+
+
+                var totalProcessingOrders = await _service.GetTotalCanceledOrdersAsync(start, end);
+                return new ApiResultModel<int>(totalProcessingOrders);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<int>(ex.Code, ex.Message, 0);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<int>(500, ex.Message, 0);
+            }
+        }
+
+
+
         // Count Last Month Orders [Processing-Canceled-Dlivered]
 
         [HttpGet("TotalProcessingOrdersLastMonth")]
@@ -568,9 +637,6 @@ namespace WebApi.Controllers
                 return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
             }
         }
-
-
-
 
         [HttpGet("GetProfitA-Revenu")]
         public async Task<ApiResultModel<DriverReportResult>> GetProfitAndRevenu(int? DriverId, string searchTerm = null, int page = 1, int pageSize = 5, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
