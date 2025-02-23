@@ -4,6 +4,7 @@ using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
 using Application.DTO.UserDtos;
 using Application.Interfaces;
+using Application.Models;
 using AutoMapper;
 using Domain.Common.Models;
 using Domain.Constants;
@@ -29,7 +30,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-
+        [Authorize(Roles = "Admin")]
         public async Task<ApiResultModel<IEnumerable<UpdateUserDTO>>> GetAllAsync()
         {
             try
@@ -96,6 +97,56 @@ namespace WebApi.Controllers
             }
 
         }
+
+        [Route("/login")]
+        [HttpPost, AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] UserLoginDto model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+                var result = await _service.Authenticate(model);
+
+                return Ok(new ResponseModel(result));
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return BadRequest(new ResponseModel(ex.Code, ex.Message) { Content = ex.Data });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseModel(500, ex.Message));
+            }
+        }
+
+
+
+        //[Route("/login")]
+        //[HttpPost, AllowAnonymous]
+        //public async Task<IActionResult> Login([FromBody] UserLoginDto model)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //            return BadRequest(ModelState);
+        //        var result = await _service.Authenticate(model);
+
+        //        return Ok(new ApiResultModel(result));
+        //    }
+        //    catch (DeliveryCoreException ex)
+        //    {
+        //        //return BadRequest(new ResponseModel(ex.Code, ex.Message) { Content = ex.Data });
+        //        //return new ApiResultModel(ex.Code, ex.Message, ex.Message) { Content = ex.Data });
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //_logger.LogWarning(ex, "")
+        //        return new ApiResultModel<UserLoginDto>(500, ex.Message, null);
+        //    }
+        //}
+
 
         [HttpGet]
         //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]

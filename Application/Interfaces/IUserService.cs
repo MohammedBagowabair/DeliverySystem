@@ -20,6 +20,8 @@ namespace Application.Interfaces
         Task<bool> Delete(int id);
         Task Update(UpdateUserDTO updateUserDTO);
         Task<IEnumerable<User>> GetAll();
+        public Task<JwtTokenModel> Authenticate(UserLoginDto user);
+
 
 
 

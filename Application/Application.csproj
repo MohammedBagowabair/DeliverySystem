@@ -8,8 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Extensions\" />
-    <Folder Include="Helpers\" />
-    <Folder Include="Models\" />
     <Folder Include="Queries\User\" />
     <Folder Include="Security\" />
   </ItemGroup>

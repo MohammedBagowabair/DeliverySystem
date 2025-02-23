@@ -116,14 +116,14 @@ app.UseCors(policyBuilder =>
 });
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "DeliverySystem API v1");
     });
-}
+//}
 
 
 app.UseHttpsRedirection();
