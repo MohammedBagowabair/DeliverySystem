@@ -1,407 +1,229 @@
-﻿
-
-
-using Application.DTO.OrderDtos;
+﻿using Application.Helpers;
 using Application.Interfaces;
 using Domain.Entities;
-using iText.IO.Font;
-using iText.Kernel.Colors;
-using iText.Kernel.Font;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Borders;
-using iText.Layout.Element;
-using iText.Layout.Properties;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using System.Globalization;
 
 namespace Application.Services
 {
     public class PdfGeneratorService : IPdfGeneratorService
     {
 
-
         public byte[] GenerateOrderPdf(List<Order> orders, string reportMessage)
         {
+            // Set QuestPDF license (Community version is free)
+            QuestPDF.Settings.License = LicenseType.Community;
+
             try
             {
-                using var memoryStream = new MemoryStream();
+                // Get current date and time
+                string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("en-US"));
 
+                // Calculate totals
+                int totalOrders = orders.Count;
+                decimal totalRevenue = orders.Sum(o => o.FinalPrice);
+                decimal companyProfit = totalRevenue * 0.7m; // Example calculation
+                decimal driversProfit = totalRevenue * 0.3m; // Example calculation
 
-                // Create a PdfWriter to write the PDF into the memory stream
-                using var pdfWriter = new PdfWriter(memoryStream);
-                using var pdfDocument = new PdfDocument(pdfWriter);
-
-                // Create a document for adding content to the PDF
-                var document = new Document(pdfDocument);
-
-                // Title of the document with smaller font size
-                document.Add(new Paragraph(reportMessage)
-                    .SetTextAlignment(TextAlignment.CENTER)
-                    .SetFontSize(14)); // Smaller font size
-
-                // Define the table structure
-                var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
-                    .UseAllAvailableWidth();
-
-                // Add headers with smaller font size
-                table.AddHeaderCell(new Cell().Add(new Paragraph("ID")).SetFontSize(10)); // Set font size for header
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Customer")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Driver")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Time")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Title")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Final Price")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Payment")).SetFontSize(10));
-                table.AddHeaderCell(new Cell().Add(new Paragraph("Status")).SetFontSize(10));
-
-                // Add rows with smaller font size
-                foreach (var order in orders)
+                return Document.Create(container =>
                 {
-                    table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString())).SetFontSize(9)); // Smaller font size for content
-                    table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "N/A")).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "N/A")).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString())).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph(order.Title)).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}")).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString())).SetFontSize(9));
-                    table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString())).SetFontSize(9));
-                }
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A3); // Set page size to A3
+                        page.Margin(30);
+                        page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(14)); // Default text style
 
-                // Add table to the document
-                document.Add(table);
+                        // Header Section
+                        page.Header().Row(row =>
+                        {
+                            row.RelativeColumn().AlignLeft().Column(col =>
+                            {
+                                col.Item().Text("\u200F" + currentDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
+                                col.Item().Text("\u200F" + "السائق: " + "Mohammed").FontSize(16).Bold().FontColor(Colors.Black);
+                            });
 
-                // Close the document to finalize the PDF
-                document.Close();
+                            row.RelativeColumn().AlignRight().Column(col =>
+                            {
+                                //col.Item().Image("path/to/company/logo.png", ImageScaling.FitArea); // Add company logo
+                                col.Item().Text("جو دليفري").FontSize(30).Bold().FontColor(Colors.Blue.Darken3);
+                            });
+                        });
 
-                // Return the byte array representing the PDF
-                return memoryStream.ToArray();
+                        // Table Section
+                        page.Content().Column(col =>
+                        {
+                            col.Item().Table(table =>
+                            {
+                                // Define table columns
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    for (int i = 0; i < 8; i++) columns.RelativeColumn();
+                                });
+
+                                // Table Header
+                                table.Header(header =>
+                                {
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالعنوان").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fطريقة الدفع").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسعر النهائي").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالوقت").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالحالة").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالعميل").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسائق").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fرقم").Bold();
+                                });
+
+                                // Table Body (Order Data) with alternating row colors
+                                for (int i = 0; i < orders.Count; i++)
+                                {
+                                    var order = orders[i];
+                                    var backgroundColor = i % 2 == 0 ? Colors.Grey.Lighten3 : Colors.White;
+
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + order.Title).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString())).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F$" + order.FinalPrice.ToString("F2")).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + order.DeliveryTime.ToString("dd/MM/yyyy", new CultureInfo("en-US"))).FontSize(10); // Updated to English calendar
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + OrderHelper.GetOrderStatusInArabic(order.orderStatus.ToString())).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + (order.Customer?.FullName ?? "غير متوفر")).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + (order.Driver?.FullName ?? "غير متوفر")).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + order.Id.ToString()).FontSize(10);
+                                }
+                            });
+
+                            // Summary Section
+                            col.Item().PaddingTop(20).Column(summary =>
+                            {
+                                summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
+                                summary.Item().AlignCenter().Text("إجمالي الإيرادات: $" + totalRevenue.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
+                                summary.Item().AlignCenter().Text("إجمالي ربح الشركة: $" + companyProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Black);
+                                summary.Item().AlignCenter().Text("إجمالي ربح السائقين: $" + driversProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Red.Darken2);
+                            });
+                        });
+                    });
+                }).GeneratePdf();
             }
             catch (Exception ex)
             {
-                // Handle any errors that might occur during PDF generation
                 throw new Exception("Error generating PDF: " + ex.Message);
             }
         }
 
 
-public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
-    {
-        try
-        {
-            using var memoryStream = new MemoryStream();
+        //public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
+        //        {
+        //            try
+        //            {
+        //                using var memoryStream = new MemoryStream();
 
-            // Create a PdfWriter to write the PDF into the memory stream
-            using var pdfWriter = new PdfWriter(memoryStream);
-            using var pdfDocument = new PdfDocument(pdfWriter);
+        //                // Create a PdfWriter to write the PDF into the memory stream
+        //                using var pdfWriter = new PdfWriter(memoryStream);
+        //                using var pdfDocument = new PdfDocument(pdfWriter);
 
-            // Create a document for adding content to the PDF
-            var document = new Document(pdfDocument);
+        //                // Create a document for adding content to the PDF
+        //                var document = new Document(pdfDocument);
 
-            // Load Arabic font (replace with the path to your Arabic font file)
-            var fontPath = "path/to/arabic-font.ttf"; // Example: "fonts/arial.ttf"
-            var arabicFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
+        //                // Load Arabic font (replace with the path to your Arabic font file)
+        //                var fontPath = "path/to/arabic-font.ttf"; // Example: "fonts/arial.ttf"
+        //                var arabicFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
 
-            // Set document direction to RTL
-            document.SetProperty(Property.TEXT_ALIGNMENT, TextAlignment.RIGHT);
+        //                // Set document direction to RTL
+        //                document.SetProperty(Property.TEXT_ALIGNMENT, TextAlignment.RIGHT);
 
-            // Add Company Name
-            document.Add(new Paragraph("جو دليفري") // "Go Delivery" in Arabic
-                .SetTextAlignment(TextAlignment.CENTER)
-                .SetFontSize(18)
-                .SetFont(arabicFont));
+        //                // Add Company Name
+        //                document.Add(new Paragraph("جو دليفري") // "Go Delivery" in Arabic
+        //                    .SetTextAlignment(TextAlignment.CENTER)
+        //                    .SetFontSize(18)
+        //                    .SetFont(arabicFont));
 
-            // Add Report Title
-            document.Add(new Paragraph(reportMessage) // Assuming reportMessage is already in Arabic
-                .SetTextAlignment(TextAlignment.CENTER)
-                .SetFontSize(14)
-                .SetFont(arabicFont));
+        //                // Add Report Title
+        //                document.Add(new Paragraph(reportMessage) // Assuming reportMessage is already in Arabic
+        //                    .SetTextAlignment(TextAlignment.CENTER)
+        //                    .SetFontSize(14)
+        //                    .SetFont(arabicFont));
 
-            // Add Driver Name and Date Range
-            document.Add(new Paragraph($"السائق: {driverName}") // "Driver: {driverName}" in Arabic
-                .SetTextAlignment(TextAlignment.RIGHT)
-                .SetFontSize(12)
-                .SetFont(arabicFont));
+        //                // Add Driver Name and Date Range
+        //                document.Add(new Paragraph($"السائق: {driverName}") // "Driver: {driverName}" in Arabic
+        //                    .SetTextAlignment(TextAlignment.RIGHT)
+        //                    .SetFontSize(12)
+        //                    .SetFont(arabicFont));
 
-            document.Add(new Paragraph($"تاريخ البدء: {startDate:yyyy-MM-dd}   |   تاريخ الانتهاء: {endDate:yyyy-MM-dd}   |   تم الإنشاء في: {DateTime.Now:yyyy-MM-dd}")
-                .SetTextAlignment(TextAlignment.RIGHT)
-                .SetFontSize(12)
-                .SetFont(arabicFont));
+        //                document.Add(new Paragraph($"تاريخ البدء: {startDate:yyyy-MM-dd}   |   تاريخ الانتهاء: {endDate:yyyy-MM-dd}   |   تم الإنشاء في: {DateTime.Now:yyyy-MM-dd}")
+        //                    .SetTextAlignment(TextAlignment.RIGHT)
+        //                    .SetFontSize(12)
+        //                    .SetFont(arabicFont));
 
-            // Add some space before the table
-            document.Add(new Paragraph("\n"));
+        //                // Add some space before the table
+        //                document.Add(new Paragraph("\n"));
 
-            // Define the table structure
-            var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
-                .UseAllAvailableWidth();
+        //                // Define the table structure
+        //                var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
+        //                    .UseAllAvailableWidth();
 
-            // Add headers with smaller font size
-            table.AddHeaderCell(new Cell().Add(new Paragraph("المعرف").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("العميل").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("السائق").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("الوقت").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("العنوان").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("السعر النهائي").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("طريقة الدفع").SetFont(arabicFont)).SetFontSize(10));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("الحالة").SetFont(arabicFont)).SetFontSize(10));
+        //                // Add headers with smaller font size
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("المعرف").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("العميل").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("السائق").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("الوقت").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("العنوان").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("السعر النهائي").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("طريقة الدفع").SetFont(arabicFont)).SetFontSize(10));
+        //                table.AddHeaderCell(new Cell().Add(new Paragraph("الحالة").SetFont(arabicFont)).SetFontSize(10));
 
-            // Add rows with smaller font size
-            foreach (var order in orders)
-            {
-                table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString()).SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString("yyyy-MM-dd HH:mm")).SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.Title).SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}").SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString()).SetFont(arabicFont)).SetFontSize(9));
-                table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString()).SetFont(arabicFont)).SetFontSize(9));
-            }
+        //                // Add rows with smaller font size
+        //                foreach (var order in orders)
+        //                {
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString()).SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString("yyyy-MM-dd HH:mm")).SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.Title).SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}").SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString()).SetFont(arabicFont)).SetFontSize(9));
+        //                    table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString()).SetFont(arabicFont)).SetFontSize(9));
+        //                }
 
-            // Add table to the document
-            document.Add(table);
+        //                // Add table to the document
+        //                document.Add(table);
 
-            // Add a line break before the summary section
-            document.Add(new Paragraph("\n"));
+        //                // Add a line break before the summary section
+        //                document.Add(new Paragraph("\n"));
 
-            // Add summary section
-            var summaryTable = new Table(new float[] { 4, 4 }) // Two-column table
-                .UseAllAvailableWidth();
+        //                // Add summary section
+        //                var summaryTable = new Table(new float[] { 4, 4 }) // Two-column table
+        //                    .UseAllAvailableWidth();
 
-            summaryTable.AddCell(new Cell().Add(new Paragraph("ربح السائق:").SetFont(arabicFont)).SetFontSize(10));
-            summaryTable.AddCell(new Cell().Add(new Paragraph($"${driverProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph("ربح السائق:").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph($"${driverProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
 
-            summaryTable.AddCell(new Cell().Add(new Paragraph("إيرادات الشركة:").SetFont(arabicFont)).SetFontSize(10));
-            summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyRevenue:F2}").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph("إيرادات الشركة:").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyRevenue:F2}").SetFont(arabicFont)).SetFontSize(10));
 
-            summaryTable.AddCell(new Cell().Add(new Paragraph("ربح الشركة:").SetFont(arabicFont)).SetFontSize(10));
-            summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph("ربح الشركة:").SetFont(arabicFont)).SetFontSize(10));
+        //                summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
 
-            document.Add(summaryTable);
+        //                document.Add(summaryTable);
 
-            // Close the document to finalize the PDF
-            document.Close();
+        //                // Close the document to finalize the PDF
+        //                document.Close();
 
-            // Return the byte array representing the PDF
-            return memoryStream.ToArray();
-        }
-        catch (Exception ex)
-        {
-            // Handle any errors that might occur during PDF generation
-            throw new Exception("خطأ في إنشاء ملف PDF: " + ex.Message); // "Error generating PDF" in Arabic
-        }
+        //                // Return the byte array representing the PDF
+        //                return memoryStream.ToArray();
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                // Handle any errors that might occur during PDF generation
+        //                throw new Exception("خطأ في إنشاء ملف PDF: " + ex.Message); // "Error generating PDF" in Arabic
+        //            }
+        //        }
     }
-    //public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
-    //{
-    //    try
-    //    {
-    //        using var memoryStream = new MemoryStream();
-
-    //        Create a PdfWriter to write the PDF into the memory stream
-    //        using var pdfWriter = new PdfWriter(memoryStream);
-    //        using var pdfDocument = new PdfDocument(pdfWriter);
-
-    //        Create a document for adding content to the PDF
-
-    //       var document = new Document(pdfDocument);
-
-    //        Load Arabic font(replace with the path to your Arabic font file)
-    //        var fontPath = "path/to/arabic-font.ttf"; // Example: "fonts/arial.ttf"
-    //        var arabicFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H);
-
-    //        Set document direction to RTL
-    //        document.SetProperty(Property.TEXT_ALIGNMENT, TextAlignment.RIGHT);
-
-    //        Add Company Name
-    //        document.Add(new Paragraph("جو دليفري") // "Go Delivery" in Arabic
-    //            .SetTextAlignment(TextAlignment.CENTER)
-    //            .SetFontSize(18)
-    //            .SetFont(arabicFont));
-
-    //        Add Report Title
-    //        document.Add(new Paragraph(reportMessage) // Assuming reportMessage is already in Arabic
-    //            .SetTextAlignment(TextAlignment.CENTER)
-    //            .SetFontSize(14)
-    //            .SetFont(arabicFont));
-
-    //        Add Driver Name and Date Range
-    //        document.Add(new Paragraph($"السائق: {driverName}") // "Driver: {driverName}" in Arabic
-    //            .SetTextAlignment(TextAlignment.RIGHT)
-    //            .SetFontSize(12)
-    //            .SetFont(arabicFont));
-
-    //        document.Add(new Paragraph($"تاريخ البدء: {startDate:yyyy-MM-dd}   |   تاريخ الانتهاء: {endDate:yyyy-MM-dd}   |   تم الإنشاء في: {DateTime.Now:yyyy-MM-dd}")
-    //            .SetTextAlignment(TextAlignment.RIGHT)
-    //            .SetFontSize(12)
-    //            .SetFont(arabicFont));
-
-    //        Add some space before the table
-    //        document.Add(new Paragraph("\n"));
-
-    //        Define the table structure
-    //        var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
-    //            .UseAllAvailableWidth();
-
-    //        Add headers with smaller font size
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("المعرف").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("العميل").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("السائق").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("الوقت").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("العنوان").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("السعر النهائي").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("طريقة الدفع").SetFont(arabicFont)).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("الحالة").SetFont(arabicFont)).SetFontSize(10));
-
-    //        Add rows with smaller font size
-    //        foreach (var order in orders)
-    //        {
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString()).SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString("yyyy-MM-dd HH:mm")).SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Title).SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}").SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString()).SetFont(arabicFont)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString()).SetFont(arabicFont)).SetFontSize(9));
-    //        }
-
-    //        Add table to the document
-    //        document.Add(table);
-
-    //        Add a line break before the summary section
-    //        document.Add(new Paragraph("\n"));
-
-    //        Add summary section
-    //       var summaryTable = new Table(new float[] { 4, 4 }) // Two-column table
-    //           .UseAllAvailableWidth();
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("ربح السائق:").SetFont(arabicFont)).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${driverProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("إيرادات الشركة:").SetFont(arabicFont)).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyRevenue:F2}").SetFont(arabicFont)).SetFontSize(10));
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("ربح الشركة:").SetFont(arabicFont)).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
-
-    //        document.Add(summaryTable);
-
-    //        Close the document to finalize the PDF
-    //        document.Close();
-
-    //        Return the byte array representing the PDF
-    //        return memoryStream.ToArray();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Handle any errors that might occur during PDF generation
-    //        throw new Exception("خطأ في إنشاء ملف PDF: " + ex.Message); // "Error generating PDF" in Arabic
-    //    }
-    //}
-
-
-
-
-
-    //public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
-    //{
-    //    try
-    //    {
-    //        using var memoryStream = new MemoryStream();
-
-    //        // Create a PdfWriter to write the PDF into the memory stream
-    //        using var pdfWriter = new PdfWriter(memoryStream);
-    //        using var pdfDocument = new PdfDocument(pdfWriter);
-
-    //        // Create a document for adding content to the PDF
-    //        var document = new Document(pdfDocument);
-
-    //        // Add Company Name
-    //        document.Add(new Paragraph("Go Delivery")
-    //            .SetTextAlignment(TextAlignment.CENTER)
-    //            .SetFontSize(18)
-    //            );
-
-    //        // Add Report Title
-    //        document.Add(new Paragraph(reportMessage)
-    //            .SetTextAlignment(TextAlignment.CENTER)
-    //            .SetFontSize(14)
-    //            );
-
-    //        // Add Driver Name and Date Range
-    //        document.Add(new Paragraph($"Driver: {driverName}")
-    //            .SetTextAlignment(TextAlignment.LEFT)
-    //            .SetFontSize(12));
-
-    //        document.Add(new Paragraph($"Start Date: {startDate:yyyy-MM-dd}   |   End Date: {endDate:yyyy-MM-dd}   |   Generated On: {DateTime.Now:yyyy-MM-dd}")
-    //            .SetTextAlignment(TextAlignment.LEFT)
-    //            .SetFontSize(12));
-
-    //        // Add some space before the table
-    //        document.Add(new Paragraph("\n"));
-
-    //        // Define the table structure
-    //        var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
-    //            .UseAllAvailableWidth();
-
-    //        // Add headers with smaller font size
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("ID")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Customer")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Driver")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Time")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Title")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Final Price")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Payment")).SetFontSize(10));
-    //        table.AddHeaderCell(new Cell().Add(new Paragraph("Status")).SetFontSize(10));
-
-    //        // Add rows with smaller font size
-    //        foreach (var order in orders)
-    //        {
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString())).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "N/A")).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "N/A")).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString("yyyy-MM-dd HH:mm"))).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.Title)).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}")).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString())).SetFontSize(9));
-    //            table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString())).SetFontSize(9));
-    //        }
-
-    //        // Add table to the document
-    //        document.Add(table);
-
-    //        // Add a line break before the summary section
-    //        document.Add(new Paragraph("\n"));
-
-    //        // Add summary section
-    //        var summaryTable = new Table(new float[] { 4, 4 }) // Two-column table
-    //            .UseAllAvailableWidth();
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("Driver Profit:")).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${driverProfit:F2}")).SetFontSize(10));
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("Company Revenue:")).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyRevenue:F2}")).SetFontSize(10));
-
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph("Company Profit:")).SetFontSize(10));
-    //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyProfit:F2}")).SetFontSize(10));
-
-    //        document.Add(summaryTable);
-
-    //        // Close the document to finalize the PDF
-    //        document.Close();
-
-    //        // Return the byte array representing the PDF
-    //        return memoryStream.ToArray();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        // Handle any errors that might occur during PDF generation
-    //        throw new Exception("Error generating PDF: " + ex.Message);
-    //    }
-    //}
-
-}
 }

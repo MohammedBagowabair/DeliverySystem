@@ -7,16 +7,11 @@ using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
-using iTextSharp.text.pdf;
-using iTextSharp.text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using PdfSharp.Drawing;
-using PdfSharp.Pdf;
 using Swashbuckle.AspNetCore.Annotations;
 using static System.Net.Mime.MediaTypeNames;
-using PdfSharp;
 using MediatR;
 using Application.Commands.Order;
 using Application.Queries.Order;
@@ -604,39 +599,39 @@ namespace WebApi.Controllers
             }
         }
 
-        [HttpGet("DownloadReportsPdf")]
-        public async Task<IActionResult> DownloadReportsPdf(int?id,string searchTerm = null, int page = 1, int pageSize = 10, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
-        {
+        //[HttpGet("DownloadReportsPdf")]
+        //public async Task<IActionResult> DownloadReportsPdf(int?id,string searchTerm = null, int page = 1, int pageSize = 10, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
+        //{
            
-            try
-            {
-                DateTime? start = startDate;
-                DateTime? end = endDate;
-                // Fetch the orders from the service
-                var results = await _service.GetDriverReportsAsync(id,page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
+        //    try
+        //    {
+        //        DateTime? start = startDate;
+        //        DateTime? end = endDate;
+        //        // Fetch the orders from the service
+        //        var results = await _service.GetDriverReportsAsync(id,page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
 
-                decimal driverProfit=results.DriverProfit;
-                decimal companyRevenue=results.CompanyRevenue;
-                decimal companyProfit=results.CompanyProfit;
+        //        decimal driverProfit=results.DriverProfit;
+        //        decimal companyRevenue=results.CompanyRevenue;
+        //        decimal companyProfit=results.CompanyProfit;
                
-                if (results?.Orders.Entities == null || !results.Orders.Entities.Any())
-                {
-                    // If no orders are found, return a "Not Found" response
-                    return NotFound("No orders found.");
-                }
+        //        if (results?.Orders.Entities == null || !results.Orders.Entities.Any())
+        //        {
+        //            // If no orders are found, return a "Not Found" response
+        //            return NotFound("No orders found.");
+        //        }
 
-                // Generate the PDF using the PdfGeneratorService
-                var pdfBytes = _pdfGeneratorService.GenerateDriversPdf(results.Orders.Entities, "Orders","Driver Name :", driverProfit, companyRevenue, companyProfit, start, end);
+        //        // Generate the PDF using the PdfGeneratorService
+        //        var pdfBytes = _pdfGeneratorService.GenerateDriversPdf(results.Orders.Entities, "Orders","Driver Name :", driverProfit, companyRevenue, companyProfit, start, end);
 
-                // Return the PDF as a file to the client
-                return File(pdfBytes, "application/pdf", "Orders.pdf");
-            }
-            catch (Exception ex)
-            {
-                // If any error occurs during PDF generation, return a server error response
-                return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
-            }
-        }
+        //        // Return the PDF as a file to the client
+        //        return File(pdfBytes, "application/pdf", "Orders.pdf");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // If any error occurs during PDF generation, return a server error response
+        //        return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
+        //    }
+        //}
 
         [HttpGet("GetProfitA-Revenu")]
         public async Task<ApiResultModel<DriverReportResult>> GetProfitAndRevenu(int? DriverId, string searchTerm = null, int page = 1, int pageSize = 5, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)

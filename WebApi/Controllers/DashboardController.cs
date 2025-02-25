@@ -106,6 +106,7 @@ namespace WebApi.Controllers
             }
 
         }
+
         [HttpGet("TotalActiveUsers")]
         public async Task<ApiResultModel<int>> GetTotalActiveUsers()
         {
@@ -145,9 +146,6 @@ namespace WebApi.Controllers
 
         }
 
-
-
-
         // TotalDrivers
         [HttpGet("TotalDrivers")]
         public async Task<ApiResultModel<int>> GetTotalDrivers()
@@ -185,9 +183,6 @@ namespace WebApi.Controllers
                 return new ApiResultModel<int>(500, ex.Message, 0);
             }
         }
-
-
-
 
         // TotalOrders
         [HttpGet("TotalOrders")]

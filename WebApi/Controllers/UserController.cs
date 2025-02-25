@@ -30,7 +30,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         public async Task<ApiResultModel<IEnumerable<UpdateUserDTO>>> GetAllAsync()
         {
             try
