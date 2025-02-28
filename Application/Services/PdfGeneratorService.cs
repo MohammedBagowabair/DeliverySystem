@@ -1,5 +1,6 @@
 ﻿using Application.Helpers;
 using Application.Interfaces;
+using Domain.Constants;
 using Domain.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -19,13 +20,16 @@ namespace Application.Services
             try
             {
                 // Get current date and time
-                string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("en-US"));
+                string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
 
-                // Calculate totals
-                int totalOrders = orders.Count;
-                decimal totalRevenue = orders.Sum(o => o.FinalPrice);
-                decimal companyProfit = totalRevenue * 0.7m; // Example calculation
-                decimal driversProfit = totalRevenue * 0.3m; // Example calculation
+                // Filter orders that are delivered
+                var deliveredOrders = orders.Where(o => o.orderStatus == OrderStatus.Delivered).ToList();
+
+                // Calculate totals for delivered orders
+                int totalOrders = deliveredOrders.Count;
+                decimal totalRevenue = deliveredOrders.Sum(o => o.FinalPrice);
+                decimal companyProfit = totalRevenue * 0.3m; // Example calculation
+                decimal driversProfit = totalRevenue * 0.7m; // Example calculation
 
                 return Document.Create(container =>
                 {
@@ -76,9 +80,9 @@ namespace Application.Services
                                 });
 
                                 // Table Body (Order Data) with alternating row colors
-                                for (int i = 0; i < orders.Count; i++)
+                                for (int i = 0; i < deliveredOrders.Count; i++)
                                 {
-                                    var order = orders[i];
+                                    var order = deliveredOrders[i];
                                     var backgroundColor = i % 2 == 0 ? Colors.Grey.Lighten3 : Colors.White;
 
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
