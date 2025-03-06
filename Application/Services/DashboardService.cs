@@ -35,9 +35,11 @@ namespace Application.Services
                  order.DeliveryTime >= start &&
                  order.DeliveryTime <= end
              )
-         .SumAsync(order => order.FinalPrice * order.Driver.CommissionRate / 100); // Calculate profit
+         //.SumAsync(order => order.FinalPrice * order.Driver.CommissionRate / 100); // Calculate profit
+         .SumAsync(order => order.FinalPrice  * 0.7m); // Calculate profit
 
             return profit;
+
         }
 
         // Overall Revenue 
@@ -73,7 +75,8 @@ namespace Application.Services
                    order.DeliveryTime >= start &&
                    order.DeliveryTime <= end
                    )
-               .SumAsync(order => order.FinalPrice - (order.FinalPrice * order.Driver.CommissionRate / 100));
+               //.SumAsync(order => order.FinalPrice - (order.FinalPrice * order.Driver.CommissionRate / 100));
+               .SumAsync(order => order.FinalPrice * 0.3m);
 
             return profit;
         }

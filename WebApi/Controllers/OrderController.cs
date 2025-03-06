@@ -586,11 +586,24 @@ namespace WebApi.Controllers
                     return NotFound("No orders found.");
                 }
 
-                // Generate the PDF using the PdfGeneratorService
-                var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders");
+                string name = string.Empty;
+                if (!string.IsNullOrEmpty(selectedDriver))
+                {
+                    name= results.Entities.Where(e=>e.Driver.Id== Convert.ToInt32(selectedDriver)).FirstOrDefault()?.Driver.FullName;
+                    var pdfBytesWithDriverName = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders", name);
+                    return File(pdfBytesWithDriverName, "application/pdf", "Orders.pdf");
 
-                // Return the PDF as a file to the client
-                return File(pdfBytes, "application/pdf", "Orders.pdf");
+                }
+                else
+                {
+                    // Generate the PDF using the PdfGeneratorService
+                    var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders");
+
+
+                    // Return the PDF as a file to the client
+                    return File(pdfBytes, "application/pdf", "Orders.pdf");
+                }
+                
             }
             catch (Exception ex)
             {
@@ -600,20 +613,20 @@ namespace WebApi.Controllers
         }
 
         //[HttpGet("DownloadReportsPdf")]
-        //public async Task<IActionResult> DownloadReportsPdf(int?id,string searchTerm = null, int page = 1, int pageSize = 10, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
+        //public async Task<IActionResult> DownloadReportsPdf(int? id, string searchTerm = null, int page = 1, int pageSize = 10, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] int? selectedDriver = null, [FromQuery] OrderStatus? selectedStatus = null)
         //{
-           
+
         //    try
         //    {
         //        DateTime? start = startDate;
         //        DateTime? end = endDate;
         //        // Fetch the orders from the service
-        //        var results = await _service.GetDriverReportsAsync(id,page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
+        //        var results = await _service.GetDriverReportsAsync(id, page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
 
-        //        decimal driverProfit=results.DriverProfit;
-        //        decimal companyRevenue=results.CompanyRevenue;
-        //        decimal companyProfit=results.CompanyProfit;
-               
+        //        decimal driverProfit = results.DriverProfit;
+        //        decimal companyRevenue = results.CompanyRevenue;
+        //        decimal companyProfit = results.CompanyProfit;
+
         //        if (results?.Orders.Entities == null || !results.Orders.Entities.Any())
         //        {
         //            // If no orders are found, return a "Not Found" response
@@ -621,7 +634,7 @@ namespace WebApi.Controllers
         //        }
 
         //        // Generate the PDF using the PdfGeneratorService
-        //        var pdfBytes = _pdfGeneratorService.GenerateDriversPdf(results.Orders.Entities, "Orders","Driver Name :", driverProfit, companyRevenue, companyProfit, start, end);
+        //        var pdfBytes = _pdfGeneratorService.GenerateDriversPdf(results.Orders.Entities, "Orders", "Driver Name :", driverProfit, companyRevenue, companyProfit, start, end);
 
         //        // Return the PDF as a file to the client
         //        return File(pdfBytes, "application/pdf", "Orders.pdf");

@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddCors();//importent
 builder.Services.AddControllers();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
@@ -29,7 +30,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Culture API",
         Version = "v1",
-        Description = "These APIs are used to serve the operations of the Culture Web App & Culture Mobile App."
+        Description = "These APIs are used to serve the operations of the Dilevery Web App & Culture Mobile App."
     });
 
     // Add JWT Authentication to Swagger
@@ -104,7 +105,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).EnableSensitiveDataLogging().EnableDetailedErrors());
 
 
-
 var app = builder.Build();
 
 app.UseCors(policyBuilder =>
@@ -114,7 +114,10 @@ app.UseCors(policyBuilder =>
                  .AllowAnyHeader();
 });
 
-// Configure the HTTP request pipeline.
+
+app.UseCors("AllowAllOrigins");
+
+//Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
     app.UseSwagger();
