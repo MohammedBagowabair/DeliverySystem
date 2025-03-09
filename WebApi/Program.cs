@@ -82,8 +82,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
-
 builder.Services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -92,8 +90,6 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPdfGeneratorService,PdfGeneratorService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<WeeklyDateRange>();
-
-
 
 //builder.Services.AddMediatR(configuration =>
 //{
@@ -104,8 +100,12 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).EnableSensitiveDataLogging().EnableDetailedErrors());
 
-
 var app = builder.Build();
+
+//Auto Migration
+using var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+db.Database.Migrate();
 
 app.UseCors(policyBuilder =>
 {
@@ -113,7 +113,6 @@ app.UseCors(policyBuilder =>
                  .AllowAnyMethod()
                  .AllowAnyHeader();
 });
-
 
 app.UseCors("AllowAllOrigins");
 
