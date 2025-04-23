@@ -119,10 +119,26 @@ namespace Application.Services
                             // Summary Section
                             col.Item().PaddingTop(20).Column(summary =>
                             {
+                                var yemeniCulture = new CultureInfo("ar-YE");
+
                                 summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
-                                summary.Item().AlignCenter().Text("إجمالي الإيرادات: $" + totalRevenue.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
-                                summary.Item().AlignCenter().Text("إجمالي ربح الشركة: $" + companyProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Black);
-                                summary.Item().AlignCenter().Text("إجمالي ربح الموصلين: $" + driversProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Red.Darken2);
+
+                                summary.Item().AlignCenter()
+                                    .Text("إجمالي الإيرادات: " + totalRevenue.ToString("C2", yemeniCulture))
+                                    .FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
+
+                                summary.Item().AlignCenter()
+                                    .Text("إجمالي ربح الشركة: " + companyProfit.ToString("C2", yemeniCulture))
+                                    .FontSize(16).Bold().FontColor(Colors.Black);
+
+                                summary.Item().AlignCenter()
+                                    .Text("إجمالي ربح الموصلين: " + driversProfit.ToString("C2", yemeniCulture))
+                                    .FontSize(16).Bold().FontColor(Colors.Red.Darken2);
+
+                                //summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
+                                //summary.Item().AlignCenter().Text("إجمالي الإيرادات: $" + totalRevenue.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
+                                //summary.Item().AlignCenter().Text("إجمالي ربح الشركة: $" + companyProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Black);
+                                //summary.Item().AlignCenter().Text("إجمالي ربح الموصلين: $" + driversProfit.ToString("F2")).FontSize(16).Bold().FontColor(Colors.Red.Darken2);
                             });
                         });
                     });
