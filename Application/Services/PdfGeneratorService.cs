@@ -20,7 +20,13 @@ namespace Application.Services
             try
             {
                 // Get current date and time
-                string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
+                //string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
+                var now = DateTime.Now;
+
+                string arabicDateTime = now.ToString("dddd، dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
+                string englishDateTime = now.ToString("yyyy/MM/dd - hh:mm tt", new CultureInfo("en-US"));
+
+
 
                 // Filter orders that are delivered
                 var deliveredOrders = orders.Where(o => o.orderStatus == OrderStatus.Delivered).ToList();
@@ -44,7 +50,10 @@ namespace Application.Services
                         {
                             row.RelativeColumn().AlignLeft().Column(col =>
                             {
-                                col.Item().Text("\u200F" + currentDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
+                                col.Item().Text("\u200F" + arabicDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
+                                col.Item().Text(englishDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
+
+                                //col.Item().Text("\u200F" + currentDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
                                 col.Item().Text("\u200F" + "الموصل: " + driverName).FontSize(16).Bold().FontColor(Colors.Black);
                             });
 
@@ -69,7 +78,8 @@ namespace Application.Services
                                 // Table Header
                                 table.Header(header =>
                                 {
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fاسم الطلب").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fملاحظه").Bold();
+                                    //header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fاسم الطلب").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fطريقة الدفع").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسعر النهائي").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالوقت").Bold();
@@ -86,7 +96,9 @@ namespace Application.Services
                                     var backgroundColor = i % 2 == 0 ? Colors.Grey.Lighten3 : Colors.White;
 
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + order.Title).FontSize(10);
+                                    .Text("\u200F" + order.Notice).FontSize(10);
+                                    //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                    //    .Text("\u200F" + order.Title).FontSize(10);
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
                                         .Text("\u200F" + OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString())).FontSize(10);
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
