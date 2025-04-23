@@ -2,13 +2,11 @@ using Application;
 using Application.Interfaces;
 using Application.Mappings;
 using Application.Services;
-using AutoMapper;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Reflection;
 using System.Text;
 
 
@@ -87,7 +85,7 @@ builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-builder.Services.AddScoped<IPdfGeneratorService,PdfGeneratorService>();
+builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<WeeklyDateRange>();
 
@@ -97,15 +95,16 @@ builder.Services.AddScoped<WeeklyDateRange>();
 //});
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).EnableSensitiveDataLogging().EnableDetailedErrors());
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).EnableSensitiveDataLogging().EnableDetailedErrors());
+builder.Services.AddEntityFrameworkMySql().AddDbContext<ApplicationDbContext>();
 
 var app = builder.Build();
 
 //Auto Migration
-using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-db.Database.Migrate();
+//using var scope = app.Services.CreateScope();
+//var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//db.Database.Migrate();
 
 app.UseCors(policyBuilder =>
 {
@@ -115,15 +114,18 @@ app.UseCors(policyBuilder =>
 });
 
 app.UseCors("AllowAllOrigins");
+using var scope = app.Services.CreateScope();
 
+var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+db.Database.Migrate();
 //Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DeliverySystem API v1");
-    });
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "DeliverySystem API v1");
+});
 //}
 
 

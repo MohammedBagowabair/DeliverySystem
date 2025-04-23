@@ -3,6 +3,7 @@ using Domain.Common.Models;
 using Domain.Entities;
 using Infrastructure.Configurations.Validators;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.Linq.Expressions;
 
 
@@ -11,15 +12,30 @@ namespace Infrastructure
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
         public DbContext _dbContext => this;
+        private readonly IConfiguration _configuration;
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
 
+        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IConfiguration configuration) : base(options)
+        {
+            _configuration = configuration;
         }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Order> Orders { get; set; }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            var connectionString = _configuration.GetConnectionString("MySqlConnectionStrings");
+            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
 
+            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mySqlOptionsAction =>
+            {
+                mySqlOptionsAction.EnableRetryOnFailure();
+            });
+        }
         public async Task<T> AddAsync<T>(T entity) where T : BaseEntity
         {
             await Set<T>().AddAsync(entity);
@@ -58,11 +74,11 @@ namespace Infrastructure
                 Set<T>().Update(entity);
                 await SaveChangesAsync();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new Exception(ex.Message);
             }
-          
+
         }
         public async Task<PagedList<T>> GetPagedAsync<T>(int page, int PageSize, System.Linq.Expressions.Expression<Func<T, bool>> predicate = null, string[] includes = null, bool IsOrde = false) where T : BaseEntity
         {
@@ -108,6 +124,6 @@ namespace Infrastructure
             base.OnModelCreating(modelBuilder);
         }
 
-       
+
     }
 }

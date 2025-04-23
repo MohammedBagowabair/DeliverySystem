@@ -1,14 +1,8 @@
 ﻿using Application.Common.Models;
-using Application.DTO.DriverDtos;
 using Application.Interfaces;
-using Application.Services;
 using AutoMapper;
-using Domain.Entities;
 using Domain.Exceptions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.DataClassification;
-using Microsoft.EntityFrameworkCore;
 
 namespace WebApi.Controllers
 {
@@ -31,7 +25,7 @@ namespace WebApi.Controllers
 
         // Driver Revenue
         [HttpGet("DriversProfit")]
-        public async Task<ApiResultModel<decimal>> GetDriverProfit(int ? driverId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        public async Task<ApiResultModel<decimal>> GetDriverProfit(int? driverId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
             {
@@ -54,7 +48,7 @@ namespace WebApi.Controllers
         {
             try
             {
-                var profit = await _service.CalculateProfitAsync( startDate, endDate);
+                var profit = await _service.CalculateProfitAsync(startDate, endDate);
                 return new ApiResultModel<decimal>(profit);
             }
             catch (DeliveryCoreException ex)
@@ -69,7 +63,7 @@ namespace WebApi.Controllers
 
         // Overall Revenue
         [HttpGet("GetRevenue")]
-        public async Task<ApiResultModel<decimal>> GetRevenue( [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        public async Task<ApiResultModel<decimal>> GetRevenue([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
             {
