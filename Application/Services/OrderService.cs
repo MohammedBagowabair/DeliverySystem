@@ -444,15 +444,22 @@ namespace Application.Services
                         orderStatus = order.orderStatus,
                         PaymentMethod = order.PaymentMethod,
                         Notice=order.Notice,
+                        
                         Customer = new Customer
                         {
                             Id = order.Customer.Id,
                             FullName = order.Customer.FullName,
+                            PhoneNumber1 = order.Customer.PhoneNumber1,
+                            PhoneNumber2 = order.Customer.PhoneNumber2,
+                            Address=order.Customer.Address
                         },
                         Driver = new Driver
                         {
                             Id = order.Driver.Id,
                             FullName = order.Driver.FullName,
+                            PhoneNumber1 = order.Driver.PhoneNumber1,
+                            PhoneNumber2 = order.Driver.PhoneNumber2,
+                            Address=order.Driver.Address
                         }
                     }).ToList(),
                     page,
