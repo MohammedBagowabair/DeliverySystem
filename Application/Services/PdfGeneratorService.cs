@@ -34,7 +34,8 @@ namespace Application.Services
                 // Calculate totals for delivered orders
                 int totalOrders = deliveredOrders.Count;
                 decimal totalRevenue = deliveredOrders.Sum(o => o.FinalPrice);
-                decimal companyProfit = totalRevenue * 0.3m; // Example calculation
+                decimal companyProfit = totalRevenue * 0.2m; // Example calculation
+                decimal companyExpinses = totalRevenue * 0.1m; // Example calculation
                 decimal driversProfit = totalRevenue * 0.7m; // Example calculation
 
                 return Document.Create(container =>
@@ -103,14 +104,17 @@ namespace Application.Services
                                         .Text("\u200F" + OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString())).FontSize(10);
                                     //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
                                     //    .Text("\u200F$" + order.FinalPrice.ToString("F2")).FontSize(10);
+                                    var yemeniCulture = new CultureInfo("ar-YE");
+
                                     table.Cell()
-                                    .Background(backgroundColor)
-                                    .Border(0.5f)
-                                    .BorderColor(Colors.Black)
-                                    .Padding(3)
-                                    .AlignRight()
-                                    .Text($"\u200F${order.FinalPrice.ToString("#,0.00")}")
-                                    .FontSize(10);
+                                        .Background(backgroundColor)
+                                        .Border(0.5f)
+                                        .BorderColor(Colors.Black)
+                                        .Padding(3)
+                                        .AlignRight()
+                                        .Text($"\u200F{order.FinalPrice.ToString("C2", yemeniCulture)}")
+                                        .FontSize(10);
+
 
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
                                         .Text("\u200F" + order.DeliveryTime.ToString("dd/MM/yyyy", new CultureInfo("en-US"))).FontSize(10); // Updated to English calendar
@@ -139,11 +143,14 @@ namespace Application.Services
                                         .FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
 
                                     summary.Item().AlignCenter()
-                                        .Text("إجمالي ربح الشركة: " + companyProfit.ToString("C2", yemeniCulture))
+                                        .Text("الاداره: " + companyProfit.ToString("C2", yemeniCulture))
                                         .FontSize(16).Bold().FontColor(Colors.Black);
+                                    summary.Item().AlignCenter()
+                                     .Text("صافي ربح الشركه: " + companyExpinses.ToString("C2", yemeniCulture))
+                                     .FontSize(16).Bold().FontColor(Colors.Black);
 
                                     summary.Item().AlignCenter()
-                                        .Text("إجمالي ربح الموصلين: " + driversProfit.ToString("C2", yemeniCulture))
+                                        .Text("نسبه الموصل: " + driversProfit.ToString("C2", yemeniCulture))
                                         .FontSize(16).Bold().FontColor(Colors.Red.Darken2);
 
                                 });
@@ -158,7 +165,7 @@ namespace Application.Services
                                     summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
 
                                     summary.Item().AlignCenter()
-                                        .Text("إجمالي ربح الموصلين: " + driversProfit.ToString("C2", yemeniCulture))
+                                        .Text("نسبه الموصل: " + driversProfit.ToString("C2", yemeniCulture))
                                         .FontSize(16).Bold().FontColor(Colors.Red.Darken2);
 
                                 });
