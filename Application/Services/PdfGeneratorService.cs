@@ -78,8 +78,8 @@ namespace Application.Services
                                 // Table Header
                                 table.Header(header =>
                                 {
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fملاحظه").Bold();
-                                    //header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fاسم الطلب").Bold();
+                                    //header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fملاحظه").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fاسم الطلب").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fطريقة الدفع").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسعر النهائي").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالوقت").Bold();
@@ -95,14 +95,23 @@ namespace Application.Services
                                     var order = deliveredOrders[i];
                                     var backgroundColor = i % 2 == 0 ? Colors.Grey.Lighten3 : Colors.White;
 
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                    .Text("\u200F" + order.Notice).FontSize(10);
                                     //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                    //    .Text("\u200F" + order.Title).FontSize(10);
+                                    //.Text("\u200F" + order.Notice).FontSize(10);
+                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                        .Text("\u200F" + order.Title).FontSize(10);
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
                                         .Text("\u200F" + OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString())).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F$" + order.FinalPrice.ToString("F2")).FontSize(10);
+                                    //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
+                                    //    .Text("\u200F$" + order.FinalPrice.ToString("F2")).FontSize(10);
+                                    table.Cell()
+                                    .Background(backgroundColor)
+                                    .Border(0.5f)
+                                    .BorderColor(Colors.Black)
+                                    .Padding(3)
+                                    .AlignRight()
+                                    .Text($"\u200F${order.FinalPrice.ToString("#,0.00")}")
+                                    .FontSize(10);
+
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
                                         .Text("\u200F" + order.DeliveryTime.ToString("dd/MM/yyyy", new CultureInfo("en-US"))).FontSize(10); // Updated to English calendar
                                     table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
