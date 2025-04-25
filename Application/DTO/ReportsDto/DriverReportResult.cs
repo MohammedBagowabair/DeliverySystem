@@ -14,5 +14,6 @@ namespace Application.DTO.ReportsDto
         public decimal DriverProfit { get; set; }
         public decimal CompanyRevenue { get; set; }
         public decimal CompanyProfit { get; set; }
+        public decimal expinses { get; set; }
     }
 }

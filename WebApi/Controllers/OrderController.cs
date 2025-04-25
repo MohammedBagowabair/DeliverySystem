@@ -663,6 +663,7 @@ namespace WebApi.Controllers
                 decimal driverProfit = results.DriverProfit;
                 decimal companyRevenue = results.CompanyRevenue;
                 decimal companyProfit = results.CompanyProfit;
+                decimal expinses = results.expinses;
 
                 if (results?.Orders.Entities != null || !results.Orders.Entities.Any())
                 {

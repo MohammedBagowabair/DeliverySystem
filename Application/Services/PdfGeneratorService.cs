@@ -80,7 +80,7 @@ namespace Application.Services
                                 table.Header(header =>
                                 {
                                     //header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fملاحظه").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fاسم الطلب").Bold();
+                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fعنوان الطلب").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fطريقة الدفع").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسعر النهائي").Bold();
                                     header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالوقت").Bold();
@@ -136,17 +136,17 @@ namespace Application.Services
                                 {
                                     var yemeniCulture = new CultureInfo("ar-YE");
 
-                                    summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
+                                    summary.Item().AlignCenter().Text("عدد الطلبات: " + totalOrders).FontSize(16).Bold();
 
                                     summary.Item().AlignCenter()
                                         .Text("إجمالي الإيرادات: " + totalRevenue.ToString("C2", yemeniCulture))
                                         .FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
 
                                     summary.Item().AlignCenter()
-                                        .Text("الاداره: " + companyProfit.ToString("C2", yemeniCulture))
+                                        .Text(" صافي ربح الشركه : " + companyProfit.ToString("C2", yemeniCulture))
                                         .FontSize(16).Bold().FontColor(Colors.Black);
                                     summary.Item().AlignCenter()
-                                     .Text("صافي ربح الشركه: " + companyExpinses.ToString("C2", yemeniCulture))
+                                     .Text("الصندوق: " + companyExpinses.ToString("C2", yemeniCulture))
                                      .FontSize(16).Bold().FontColor(Colors.Black);
 
                                     summary.Item().AlignCenter()
@@ -163,6 +163,10 @@ namespace Application.Services
                                     var yemeniCulture = new CultureInfo("ar-YE");
 
                                     summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
+
+                                    summary.Item().AlignCenter()
+                                    .Text("الاداره : " + (companyProfit+ companyExpinses).ToString("C2", yemeniCulture))
+                                    .FontSize(16).Bold().FontColor(Colors.Black);
 
                                     summary.Item().AlignCenter()
                                         .Text("نسبه الموصل: " + driversProfit.ToString("C2", yemeniCulture))

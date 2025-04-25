@@ -556,7 +556,9 @@ namespace Application.Services
                 decimal driverProfit = totalRevenue * 0.7m;
 
                 // Calculate company profit (30% of revenue from the same orders)
-                decimal companyProfit = totalRevenue * 0.3m;
+                decimal companyProfit = totalRevenue * 0.2m;
+
+                decimal expinses = totalRevenue * 0.1m;
 
 
 
@@ -594,7 +596,8 @@ namespace Application.Services
                     Orders = pagedOrderDTOs,
                     DriverProfit = driverProfit,
                     CompanyProfit = companyProfit,
-                    CompanyRevenue = totalRevenue
+                    CompanyRevenue = totalRevenue,
+                    expinses = expinses,
                 };
             }
             catch (Exception ex)
