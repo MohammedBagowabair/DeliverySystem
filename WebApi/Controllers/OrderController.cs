@@ -597,7 +597,11 @@ namespace WebApi.Controllers
                 else
                 {
                     // Generate the PDF using the PdfGeneratorService
-                    var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders");
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        name = " جميع الموصلين ";
+                    }
+                    var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders", name);
 
 
                     // Return the PDF as a file to the client
