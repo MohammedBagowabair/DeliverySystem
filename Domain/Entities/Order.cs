@@ -30,10 +30,10 @@ namespace Domain.Entities
         public OrderStatus orderStatus { get; set; }
 
 
-        [StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
+        //[StringLength(20, ErrorMessage = "Title cannot exceed 20 characters.")]
         public string Title { get; set; } = string.Empty;
 
-        [StringLength(200, ErrorMessage = "Notice cannot exceed 50 characters.")]
+        //[StringLength(200, ErrorMessage = "Notice cannot exceed 50 characters.")]
         public string Notice { get; set; } = string.Empty;
 
     }
