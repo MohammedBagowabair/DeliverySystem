@@ -130,7 +130,7 @@ graph TD
     C --> D[Domain Layer]
     C --> E[Infrastructure Layer]
     E -->|MySQL| F[(Database)]
-    A -->|Blazor WASM| G[Browser]
+    A -->|Blazor | G[Browser]
 ```
 ## 💻 Technology Stack
 ```mermaid
@@ -146,4 +146,4 @@ pie
 Pull requests are welcome! For major changes, please open an issue first to discuss.
 
 📄 License
-Proprietary - © 2024 Mohammed Bagowabair
+Proprietary - © 2025 Mohammed Bagowabair
