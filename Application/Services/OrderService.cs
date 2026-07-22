@@ -78,13 +78,7 @@ namespace Application.Services
         }
         public async Task<int> CountAsync()
         {
-            var totalRecord = await GetAll();
-            int total = 0;
-            foreach (var record in totalRecord)
-            {
-                total += 1;
-            }
-            return total;
+            return await _dbContext.CountAsync<Order>();
         }
         public async Task<PagedList<Order>> GetAllPagedAsync(int page, int PageSize)
         {

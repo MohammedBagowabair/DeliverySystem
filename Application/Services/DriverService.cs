@@ -62,13 +62,7 @@ namespace Application.Services
  
         public async Task<int> CountAsync()
         {
-            var totalRecord = await GetAll();
-            int total = 0;
-            foreach (var record in totalRecord)
-            {
-                total += 1;
-            }
-            return total;
+            return await _dbContext.CountAsync<Driver>();
         }
         public async Task<PagedList<Driver>> GetAllPagedAsync(int page, int PageSize)
         {
