@@ -1,5 +1,4 @@
 ﻿using Application.Common.Models;
-using Application.DTO.AccountDtos;
 using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
 using Application.DTO.UserDtos;
@@ -12,7 +11,6 @@ using Domain.Entities;
 using Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers

@@ -1,5 +1,4 @@
 ﻿using Application.Common.Models;
-using Application.DTO.AccountDtos;
 using Application.DTO.UserDtos;
 using Application.Helpers;
 using Application.Interfaces;

@@ -40,10 +40,8 @@ namespace WebApi.Controllers
         {
             try
             {
-                GetAllCustomersQuery getAllCustomersQuery = new GetAllCustomersQuery();
-                var result = await _mediator.Send(getAllCustomersQuery);
-
-                var resultDto = _mapper.Map<IEnumerable<CustomerDTO>>(await _service.GetAll());
+                var result = await _mediator.Send(new GetAllCustomersQuery());
+                var resultDto = _mapper.Map<IEnumerable<CustomerDTO>>(result);
                 return new ApiResultModel<IEnumerable<CustomerDTO>>(resultDto);
             }
             catch (DeliveryCoreException ex)
