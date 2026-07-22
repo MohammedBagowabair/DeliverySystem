@@ -482,8 +482,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
-                DateTime end = DateTime.Today.AddDays(1);
+                var month = Application.Helpers.OrderDateRanges.CurrentMonthMtd();
+                DateTime start = month.Start;
+                DateTime end = month.End;
 
 
                 var totalProcessingOrders = await _service.GetTotalProcessingOrdersAsync(start, end);
@@ -503,8 +504,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
-                DateTime end = DateTime.Today.AddDays(1);
+                var month = Application.Helpers.OrderDateRanges.CurrentMonthMtd();
+                DateTime start = month.Start;
+                DateTime end = month.End;
 
                 var totalProcessingOrders = await _service.GetTotalDileveredOrdersAsync(start, end);
                 return new ApiResultModel<int>(totalProcessingOrders);
@@ -523,8 +525,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                DateTime start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); // First day of the current month
-                DateTime end = DateTime.Today.AddDays(1);
+                var month = Application.Helpers.OrderDateRanges.CurrentMonthMtd();
+                DateTime start = month.Start;
+                DateTime end = month.End;
 
                 var totalProcessingOrders = await _service.GetTotalCanceledOrdersAsync(start, end);
                 return new ApiResultModel<int>(totalProcessingOrders);

@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Application.Helpers;
 
 namespace Application.Services
 {
+    /// <summary>
+    /// Rolling last-7-days window (through end of today). Used by week order counts.
+    /// </summary>
     public class WeeklyDateRange
     {
         public DateTime StartDate { get; private set; }
@@ -13,31 +12,14 @@ namespace Application.Services
 
         public WeeklyDateRange()
         {
-            SetCurrentWeekRange();
-        }
-
-        private void SetCurrentWeekRange()
-        {
-            DateTime today = DateTime.Today;
-            int year = today.Year;
-            int month = today.Month;
-
-            // Get total days in current month
-            int daysInMonth = DateTime.DaysInMonth(year, month);
-
-            // Define week start days (1-7, 8-14, 15-21, etc.)
-            int weekStart = ((today.Day - 1) / 7) * 7 + 1;
-            int weekEnd = Math.Min(weekStart + 6, daysInMonth); // Ensure it doesn't exceed month end
-
-            // Set the range
-            StartDate = new DateTime(year, month, weekStart);
-            EndDate = new DateTime(year, month, weekEnd);
+            var range = OrderDateRanges.Last7Days();
+            StartDate = range.Start;
+            EndDate = range.End;
         }
 
         public override string ToString()
         {
-            return $"Current Week: {StartDate:yyyy-MM-dd} to {EndDate:yyyy-MM-dd}";
+            return $"Last 7 days: {StartDate:yyyy-MM-dd} to {EndDate:yyyy-MM-dd}";
         }
     }
-
 }
