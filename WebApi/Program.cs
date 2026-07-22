@@ -118,6 +118,7 @@ using var scope = app.Services.CreateScope();
 
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 db.Database.Migrate();
+await Infrastructure.Seed.UserSeeder.SeedAsync(app.Services);
 //Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{

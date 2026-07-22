@@ -61,8 +61,18 @@ namespace Application.Services
             }
 
             GetPasswordHashAndSalt(createUserDTO.Password, out string passwordHash, out string passwordSalt);
+
+            var role = createUserDTO.Role?.Trim();
+            if (role != Roles.Admin && role != Roles.Staff)
+            {
+                throw new DeliveryCoreException(
+                    "Role must be Admin or Staff.",
+                    ErrorCodes.ROLE_NAME_NOT_FOUND,
+                    null);
+            }
+
             User user = new User();
-            user.Role= Roles.Staff;
+            user.Role = role;
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
             user.Email = createUserDTO.Email;
@@ -70,8 +80,7 @@ namespace Application.Services
             user.Address = createUserDTO.Address;
             user.PhoneNumber1 = createUserDTO.PhoneNumber1;
             user.PhoneNumber2 = createUserDTO.PhoneNumber2;
-            user.Role = Roles.Staff;
-
+            user.IsActive = createUserDTO.IsActive;
 
             return await _dbContext.AddAsync<User>(user);
         }

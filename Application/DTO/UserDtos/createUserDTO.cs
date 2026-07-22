@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Domain.Constants;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.DTO.UserDtos
 {
@@ -15,5 +11,10 @@ namespace Application.DTO.UserDtos
         [Required(ErrorMessage = "Confirm Password is required")]
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; }
+
+        /// <summary>Allowed values: Admin, Staff only.</summary>
+        [Required(ErrorMessage = "Role is required")]
+        [RegularExpression("^(Admin|Staff)$", ErrorMessage = "Role must be Admin or Staff")]
+        public string Role { get; set; } = Roles.Staff;
     }
 }
