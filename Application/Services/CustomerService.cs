@@ -2,11 +2,7 @@
 using Domain.Common.Models;
 using Domain.Entities;
 using Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -42,6 +38,14 @@ namespace Application.Services
         }
         public async Task<bool> Delete(int id)
         {
+            var hasOrders = await _dbContext._dbContext.Set<Order>().AnyAsync(o => o.CustomerId == id);
+            if (hasOrders)
+            {
+                throw new DeliveryCoreException(
+                    "Cannot delete customer while related orders exist.",
+                    ErrorCodes.NOT_ALL_RECORDS_DELETED_CODE,
+                    null);
+            }
            return await _dbContext.DeleteAsync<Customer>(id);
         }
 

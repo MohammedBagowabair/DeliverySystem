@@ -16,11 +16,10 @@ namespace Infrastructure.Configurations.Validators
 
             // Configure Shift property
             builder.Property(x => x.Shift)
-                   .IsRequired()  // Ensure it's not nullable
-                   .HasMaxLength(10);  // Set max length to prevent long strings
+                   .IsRequired()
+                   .HasMaxLength(10);
 
-            builder.HasMany<Order>(x => x.Orders).WithOne(x => x.Driver).HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
-
+            // Relationship configured on Order (Restrict delete)
         }
     }
 }

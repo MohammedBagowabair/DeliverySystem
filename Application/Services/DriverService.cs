@@ -3,13 +3,7 @@ using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Exceptions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -55,6 +49,14 @@ namespace Application.Services
         }
         public async Task<bool> Delete(int id)
         {
+            var hasOrders = await _dbContext._dbContext.Set<Order>().AnyAsync(o => o.DriverId == id);
+            if (hasOrders)
+            {
+                throw new DeliveryCoreException(
+                    "Cannot delete driver while related orders exist.",
+                    ErrorCodes.NOT_ALL_RECORDS_DELETED_CODE,
+                    null);
+            }
            return await _dbContext.DeleteAsync<Driver>(id);
         }
  
