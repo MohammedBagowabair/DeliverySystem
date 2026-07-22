@@ -1,4 +1,4 @@
-﻿using Application.Common.Models;
+using Application.Common.Models;
 using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
 using Application.DTO.UserDtos;
@@ -17,6 +17,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
     public class UserController : ControllerBase
     {
         private readonly IUserService _service;
@@ -28,7 +29,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<ApiResultModel<IEnumerable<UpdateUserDTO>>> GetAllAsync()
         {
             try
@@ -49,7 +50,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet("SearchUsers")]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<PagedList<UserDTO>>> SearchUsersAsync(string searchTerm, int page = 1, int pageSize = 10)
         {
             try
@@ -69,7 +70,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("CreateUserAsync")]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<createUserDTO>> CreateUserAsync(createUserDTO createUserDTO)
         {
             try
@@ -147,7 +148,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<UserDTO>> GetAsync(int id)
         {
             try
@@ -169,7 +170,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        //[Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -192,7 +193,7 @@ namespace WebApi.Controllers
 
 
         [HttpPut]
-        //[Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(UpdateUserDTO updateUserDTO)
         {
             try

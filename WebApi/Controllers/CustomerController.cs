@@ -1,4 +1,4 @@
-﻿using Application.Commands.Customer;
+using Application.Commands.Customer;
 using Application.Commands.Order;
 using Application.Common.Models;
 using Application.DTO.CustomerDtos;
@@ -20,6 +20,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _service;
@@ -35,7 +36,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<CustomerDTO>>> GetAllAsync()
         {
             try
@@ -58,7 +59,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CustomerDTO>> GetAsync(int id)
         {
             try
@@ -83,7 +84,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateCustomerDTO>> AddAsync(CreateUpdateCustomerDTO createCustomerDTO)
         {
            
@@ -110,7 +111,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateCustomerDTO createUpdateCustomerDTO)
         {
             try
@@ -137,7 +138,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id) 
         {
             try

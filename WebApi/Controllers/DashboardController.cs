@@ -1,13 +1,16 @@
 ﻿using Application.Common.Models;
 using Application.Interfaces;
 using AutoMapper;
+using Domain.Constants;
 using Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
     public class DashboardController : ControllerBase
     {
 

@@ -1,4 +1,4 @@
-﻿using Application.Commands.Driver;
+using Application.Commands.Driver;
 using Application.Common.Models;
 using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
@@ -20,6 +20,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
     public class DriverController : ControllerBase
     {
         private readonly IDriverService _service;
@@ -34,7 +35,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<DriverDTO>>> GetAllAsync()
         {
             try
@@ -56,7 +57,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<DriverDTO>> GetAsync(int id)
         {
             try
@@ -80,7 +81,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try
@@ -105,7 +106,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -128,7 +129,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateDriverDTO createUpdateDriverDTO)
         {
             try

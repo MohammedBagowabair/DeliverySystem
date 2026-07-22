@@ -1,4 +1,4 @@
-﻿using Application.Common.Models;
+using Application.Common.Models;
 using Application.DTO.OrderDtos;
 using Application.Interfaces;
 using Application.Services;
@@ -22,6 +22,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
     public class OrderController : ControllerBase
     {
         private readonly WeeklyDateRange _weeklyDateRange;
@@ -41,7 +42,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<IEnumerable<OrderDTO>>> GetAllAsync()
         {
             try
@@ -67,7 +68,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<OrderDTO>> GetAsync(int id)
         {
             try
@@ -117,7 +118,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -141,7 +142,7 @@ namespace WebApi.Controllers
 
         }
         [HttpPut]
-        //[Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
         public async Task<ApiResultModel<bool>> UpdateAsync(OrderDTO updateOrderDTO)
         {
             try
@@ -602,7 +603,7 @@ namespace WebApi.Controllers
                     // Generate the PDF using the PdfGeneratorService
                     if (string.IsNullOrEmpty(name))
                     {
-                        name = " جميع الموصلين ";
+                        name = " ???? ???????? ";
                     }
                     var pdfBytes = _pdfGeneratorService.GenerateOrderPdf(results.Entities, "Orders", name);
 
