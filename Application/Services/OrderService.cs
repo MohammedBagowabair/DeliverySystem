@@ -5,6 +5,7 @@ using Application.Interfaces;
 using Domain.Common.Models;
 using Domain.Constants;
 using Domain.Entities;
+using Domain.Exceptions;
 using LinqKit;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,40 +30,47 @@ namespace Application.Services
         }
         public async Task<Order> Create(Order order)
         {
-            order.DeliveryTime = DateTime.Now;
             order.orderStatus = OrderStatus.Processing;
+            // Keep client-provided DeliveryTime when set; otherwise stamp create time
+            if (order.DeliveryTime == default)
+            {
+                order.DeliveryTime = DateTime.Now;
+            }
             return await _dbContext.AddAsync<Order>(order);
         }
         public async Task Update(Order order)
         {
-            //try
-            //{
+            var existing = await GetById(order.Id)
+                ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
 
-            //    if (order.orderStatus == OrderStatus.Processing)
-            //    {
-            //        order.orderStatus = OrderStatus.Processing;
-            //    }
-            //    if (order.orderStatus == OrderStatus.Delivered)
-            //    {
-            //        order.orderStatus = OrderStatus.Delivered;
+            if (!OrderStatusTransitions.CanTransition(existing.orderStatus, order.orderStatus))
+            {
+                throw new DeliveryCoreException(
+                    $"Cannot change order status from {existing.orderStatus} to {order.orderStatus}. Allowed: {OrderStatusTransitions.DescribeAllowed(existing.orderStatus)}.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
 
-            //    }
-            //    if (order.orderStatus == OrderStatus.Canceled)
-            //    {
-            //        order.orderStatus = OrderStatus.Canceled;
-            //    }
+            // DeliveryTime represents completion time once delivered
+            if (existing.orderStatus != OrderStatus.Delivered && order.orderStatus == OrderStatus.Delivered)
+            {
+                order.DeliveryTime = DateTime.Now;
+            }
+            else if (order.orderStatus == OrderStatus.Processing && order.DeliveryTime == default)
+            {
+                order.DeliveryTime = existing.DeliveryTime;
+            }
+            else if (order.orderStatus != OrderStatus.Processing)
+            {
+                // Preserve original create/completion time for non-processing edits
+                order.DeliveryTime = existing.DeliveryTime;
+            }
 
-              _dbContext._dbContext.Set<Order>().Update(order);
-              await  _dbContext._dbContext.SaveChangesAsync();
-               // throw new Exception("nkn");
+            order.CustomerId = order.CustomerId == 0 ? existing.CustomerId : order.CustomerId;
+            order.DriverId = order.DriverId == 0 ? existing.DriverId : order.DriverId;
 
-            //}
-            //catch (Exception ex)
-            //{
-            //    throw new Exception(ex.Message);s
-            //}
-            
-           
+            _dbContext._dbContext.Set<Order>().Update(order);
+            await _dbContext._dbContext.SaveChangesAsync();
         }
         public async Task<bool> Delete(int id)
         {
