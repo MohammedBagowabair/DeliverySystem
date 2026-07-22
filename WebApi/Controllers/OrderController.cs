@@ -660,20 +660,12 @@ namespace WebApi.Controllers
                 // Fetch the orders from the service
                 var results = await _service.GetDriverReportsAsync(DriverId, page, pageSize, searchTerm, startDate, endDate, selectedDriver, selectedStatus);
 
-                decimal driverProfit = results.DriverProfit;
-                decimal companyRevenue = results.CompanyRevenue;
-                decimal companyProfit = results.CompanyProfit;
-                decimal expinses = results.expinses;
-
-                if (results?.Orders.Entities != null || !results.Orders.Entities.Any())
-                {
-                    return new ApiResultModel<DriverReportResult>(results);
-                }
-                else
+                if (results?.Orders?.Entities == null)
                 {
                     throw new Exception("We did not found anything.");
-
                 }
+
+                return new ApiResultModel<DriverReportResult>(results);
             }
             catch(Exception ex)
             {

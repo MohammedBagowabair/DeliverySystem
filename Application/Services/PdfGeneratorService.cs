@@ -34,9 +34,9 @@ namespace Application.Services
                 // Calculate totals for delivered orders
                 int totalOrders = deliveredOrders.Count;
                 decimal totalRevenue = deliveredOrders.Sum(o => o.FinalPrice);
-                decimal companyProfit = totalRevenue * 0.2m; // Example calculation
-                decimal companyExpinses = totalRevenue * 0.1m; // Example calculation
-                decimal driversProfit = totalRevenue * 0.7m; // Example calculation
+                decimal companyProfit = Helpers.RevenueSplit.CompanyProfit(totalRevenue);
+                decimal companyExpinses = Helpers.RevenueSplit.Expenses(totalRevenue);
+                decimal driversProfit = Helpers.RevenueSplit.DriverProfit(totalRevenue);
 
                 return Document.Create(container =>
                 {

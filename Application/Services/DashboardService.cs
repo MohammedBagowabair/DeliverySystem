@@ -1,13 +1,8 @@
-﻿using Application.Interfaces;
+﻿using Application.Helpers;
+using Application.Interfaces;
 using Domain.Constants;
 using Domain.Entities;
-using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -35,8 +30,7 @@ namespace Application.Services
                  order.DeliveryTime >= start &&
                  order.DeliveryTime <= end
              )
-         //.SumAsync(order => order.FinalPrice * order.Driver.CommissionRate / 100); // Calculate profit
-         .SumAsync(order => order.FinalPrice  * 0.7m); // Calculate profit
+         .SumAsync(order => order.FinalPrice * RevenueSplit.DriverShare);
 
             return profit;
 
@@ -61,22 +55,20 @@ namespace Application.Services
             return revenue;
         }
 
-        // Overall Profit
+        // Overall company profit (20% of delivered revenue; 10% expenses are separate)
         public async Task<decimal> CalculateProfitAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
             // Set default date range
             var start = startDate ?? DateTime.MinValue;
             var end = endDate ?? DateTime.MaxValue;
 
-            // Calculate revenue and total cost directly in the database
             var profit = await _dbContext._dbContext.Set<Order>()
                .Where(order =>
                    order.orderStatus == OrderStatus.Delivered &&
                    order.DeliveryTime >= start &&
                    order.DeliveryTime <= end
                    )
-               //.SumAsync(order => order.FinalPrice - (order.FinalPrice * order.Driver.CommissionRate / 100));
-               .SumAsync(order => order.FinalPrice * 0.3m);
+               .SumAsync(order => order.FinalPrice * RevenueSplit.CompanyProfitShare);
 
             return profit;
         }

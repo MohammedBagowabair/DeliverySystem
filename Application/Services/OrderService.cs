@@ -1,5 +1,6 @@
 ﻿
 using Application.DTO.ReportsDto;
+using Application.Helpers;
 using Application.Interfaces;
 using Domain.Common.Models;
 using Domain.Constants;
@@ -206,47 +207,53 @@ namespace Application.Services
         {
             try
             {
-                DateTime start = startDate ?? startDate.Value;
-                DateTime end = endDate ?? endDate.Value;
+                searchTerm = searchTerm?.Trim()?.ToLower();
+
                 if (startDate == null && endDate == null)
                 {
-                    searchTerm = searchTerm?.Trim()?.ToLower();
                     if (string.IsNullOrEmpty(searchTerm))
                     {
-                        //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
                         return await _dbContext.GetPagedAsync<Order>(page, pageSize, null, ["Driver", "Customer"], true);
                     }
 
-
-                    // Use predicate for search
                     return await _dbContext.GetPagedAsync<Order>(
                         page,
-                        pageSize, d => d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
-                    );
+                        pageSize,
+                        d => d.Customer.FullName.ToLower().Contains(searchTerm)
+                             || d.Driver.FullName.ToLower().Contains(searchTerm)
+                             || d.Title.ToLower().Contains(searchTerm),
+                        ["Driver", "Customer"],
+                        true);
                 }
-                else
+
+                DateTime start = startDate ?? DateTime.MinValue;
+                DateTime end = endDate ?? DateTime.MaxValue;
+
+                if (string.IsNullOrEmpty(searchTerm))
                 {
-                    // Normalize search term
-                    searchTerm = searchTerm?.Trim()?.ToLower();
-                    if (string.IsNullOrEmpty(searchTerm))
-                    {
-                        //return await _dbContext._dbContext.Set<Order>().Where(x=>x.CustomerId>10).ToListAsync();
-                        return await _dbContext.GetPagedAsync<Order>(page, pageSize, x => x.DeliveryTime >= start && x.DeliveryTime <= end, ["Driver", "Customer"], true);
-                    }
-
-
-                    // Use predicate for search
                     return await _dbContext.GetPagedAsync<Order>(
                         page,
-                        pageSize, d => d.DeliveryTime >= start && d.DeliveryTime <= end || d.Customer.FullName.ToLower().Contains(searchTerm) || d.Driver.FullName.Contains(searchTerm) || d.Title.Contains(searchTerm), ["Driver", "Customer"], true
-                    );
+                        pageSize,
+                        x => x.DeliveryTime >= start && x.DeliveryTime <= end,
+                        ["Driver", "Customer"],
+                        true);
                 }
+
+                return await _dbContext.GetPagedAsync<Order>(
+                    page,
+                    pageSize,
+                    d => d.DeliveryTime >= start
+                         && d.DeliveryTime <= end
+                         && (d.Customer.FullName.ToLower().Contains(searchTerm)
+                             || d.Driver.FullName.ToLower().Contains(searchTerm)
+                             || d.Title.ToLower().Contains(searchTerm)),
+                    ["Driver", "Customer"],
+                    true);
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 throw new Exception(e.Message);
             }
-           
         }
 
         public async Task<PagedList<Order>> GetPDFLastWeekOrdersAsync()
@@ -478,7 +485,7 @@ namespace Application.Services
 
 
         public async Task<DriverReportResult> GetDriverReportsAsync(
-        int? driverId, // Filter by Driver ID
+        int? driverId,
         int page,
         int pageSize,
         string searchTerm = null,
@@ -489,23 +496,20 @@ namespace Application.Services
         {
             try
             {
-                // Default to MinValue and MaxValue if dates are null
                 DateTime start = startDate ?? DateTime.MinValue;
                 DateTime end = endDate ?? DateTime.MaxValue;
-
-                // Normalize search term
                 searchTerm = searchTerm?.Trim()?.ToLower();
 
-                // Build filter predicate dynamically
+                // Prefer explicit SelectedDriver; fall back to driverId
+                int? effectiveDriverId = SelectedDriver ?? driverId;
+
                 var predicate = PredicateBuilder.New<Order>(true);
 
-                // Filter by Driver ID if provided
-                if (driverId.HasValue)
+                if (effectiveDriverId.HasValue)
                 {
-                    predicate = predicate.And(order => order.Driver.Id == SelectedDriver.Value);
+                    predicate = predicate.And(order => order.DriverId == effectiveDriverId.Value);
                 }
 
-                // Apply search filters
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     predicate = predicate.And(order =>
@@ -516,26 +520,19 @@ namespace Application.Services
 
                 predicate = predicate.And(order => order.DeliveryTime >= start && order.DeliveryTime <= end);
 
-                if (!string.IsNullOrEmpty(SelectedDriver.ToString()))
-                {
-                    predicate = predicate.And(order => order.Driver.Id == SelectedDriver);
-                }
-
                 if (SelectedStatus.HasValue)
                 {
                     predicate = predicate.And(order => order.orderStatus == SelectedStatus.Value);
                 }
 
-                // Query the database using the predicate and include related entities
                 var pagedOrders = await _dbContext.GetPagedAsync<Order>(
                     page,
                     pageSize,
                     predicate,
-                    new[] { "Driver", "Customer" }, // Include related entities
+                    new[] { "Driver", "Customer" },
                     true
                 );
 
-                // Query to get delivered orders within the given day
                 var query = _dbContext._dbContext.Set<Order>()
                     .Where(order =>
                         order.orderStatus == OrderStatus.Delivered &&
@@ -543,28 +540,16 @@ namespace Application.Services
                         order.DeliveryTime <= end
                     );
 
-                // If a specific driver is selected, filter orders by that driver
-                if (SelectedDriver.HasValue)
+                if (effectiveDriverId.HasValue)
                 {
-                    query = query.Where(order => order.DriverId == SelectedDriver);
+                    query = query.Where(order => order.DriverId == effectiveDriverId.Value);
                 }
 
-                // Calculate total revenue from the filtered orders
                 decimal totalRevenue = await query.SumAsync(order => order.FinalPrice);
+                decimal driverProfit = RevenueSplit.DriverProfit(totalRevenue);
+                decimal companyProfit = RevenueSplit.CompanyProfit(totalRevenue);
+                decimal expenses = RevenueSplit.Expenses(totalRevenue);
 
-                // Calculate driver profit (70% of revenue from their orders)
-                decimal driverProfit = totalRevenue * 0.7m;
-
-                // Calculate company profit (30% of revenue from the same orders)
-                decimal companyProfit = totalRevenue * 0.2m;
-
-                decimal expinses = totalRevenue * 0.1m;
-
-
-
-
-
-                //Map to DTOs
                 var pagedOrderDTOs = new PagedList<Order>(
                    pagedOrders.TotalCount,
                    pagedOrders.Entities.Select(order => new Order
@@ -597,7 +582,7 @@ namespace Application.Services
                     DriverProfit = driverProfit,
                     CompanyProfit = companyProfit,
                     CompanyRevenue = totalRevenue,
-                    expinses = expinses,
+                    expinses = expenses,
                 };
             }
             catch (Exception ex)
