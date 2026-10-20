@@ -9,118 +9,148 @@ namespace Application.Services
     public class DashboardService : IDashboardService
     {
         public IApplicationDbContext _dbContext;
-        public DashboardService(IApplicationDbContext dbContext)
+        private readonly ICompanyFundService _companyFundService;
+        private readonly IYearCloseService _yearCloseService;
+        private readonly IBusinessDayService _businessDayService;
+
+        public DashboardService(
+            IApplicationDbContext dbContext,
+            ICompanyFundService companyFundService,
+            IYearCloseService yearCloseService,
+            IBusinessDayService businessDayService)
         {
             _dbContext = dbContext;
+            _companyFundService = companyFundService;
+            _yearCloseService = yearCloseService;
+            _businessDayService = businessDayService;
         }
 
+        private async Task<(DateTime Start, DateTime End)> ResolveRangeAsync(DateTime? startDate, DateTime? endDate)
+        {
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                var start = startDate ?? DateTime.MinValue;
+                var end = endDate ?? DateTime.MaxValue;
+                if (end != DateTime.MaxValue && end.TimeOfDay == TimeSpan.Zero)
+                    end = YemenTime.EndOfDay(end);
+                if (start != DateTime.MinValue && start.TimeOfDay == TimeSpan.Zero)
+                    start = YemenTime.StartOfDay(start);
+                return (start, end);
+            }
 
-        //Driver Profit
+            // No dates = current business day (not whole year).
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            return OrderDateRanges.Today(businessDate);
+        }
+
         public async Task<decimal> CalculateDriverProfitAsync(int? driverId, DateTime? startDate = null, DateTime? endDate = null)
         {
-            // Set default date range
-            var start = startDate ?? DateTime.MinValue;
-            var end = endDate ?? DateTime.MaxValue;
+            var (start, end) = await ResolveRangeAsync(startDate, endDate);
 
-            // Calculate revenue directly in the database
             var profit = await _dbContext._dbContext.Set<Order>()
-             .Where(order =>
-                 (!driverId.HasValue || order.DriverId == driverId) && // If driverId is null, include all drivers
-                 order.orderStatus == OrderStatus.Delivered &&
-                 order.DeliveryTime >= start &&
-                 order.DeliveryTime <= end
-             )
-         .SumAsync(order => order.FinalPrice * RevenueSplit.DriverShare);
+                .Include(order => order.Driver)
+                .Where(order =>
+                    (!driverId.HasValue || order.DriverId == driverId) &&
+                    order.orderStatus == OrderStatus.Delivered &&
+                    order.DeliveryTime >= start &&
+                    order.DeliveryTime <= end)
+                .SumAsync(order =>
+                    order.DriverAmount > 0
+                        ? order.DriverAmount
+                        : order.FinalPrice * (
+                            order.Driver != null && order.Driver.CommissionRate > 0
+                                ? order.Driver.CommissionRate
+                                : RevenueSplit.DefaultDriverCommissionRate));
 
             return profit;
-
         }
 
-        // Overall Revenue 
         public async Task<decimal> CalculateRevenueAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
-            // Set default date range
-            var start = startDate ?? DateTime.MinValue;
-            var end = endDate ?? DateTime.MaxValue;
+            var (start, end) = await ResolveRangeAsync(startDate, endDate);
 
-            // Calculate revenue directly in the database
             var revenue = await _dbContext._dbContext.Set<Order>()
                 .Where(order =>
                     order.orderStatus == OrderStatus.Delivered &&
                     order.DeliveryTime >= start &&
-                    order.DeliveryTime <= end
-                    )
+                    order.DeliveryTime <= end)
                 .SumAsync(order => order.FinalPrice);
 
             return revenue;
         }
 
-        // Overall company profit (20% of delivered revenue; 10% expenses are separate)
         public async Task<decimal> CalculateProfitAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
-            // Set default date range
-            var start = startDate ?? DateTime.MinValue;
-            var end = endDate ?? DateTime.MaxValue;
+            var (start, end) = await ResolveRangeAsync(startDate, endDate);
 
-            var profit = await _dbContext._dbContext.Set<Order>()
-               .Where(order =>
-                   order.orderStatus == OrderStatus.Delivered &&
-                   order.DeliveryTime >= start &&
-                   order.DeliveryTime <= end
-                   )
-               .SumAsync(order => order.FinalPrice * RevenueSplit.CompanyProfitShare);
+            var delivered = _dbContext._dbContext.Set<Order>()
+                .Include(order => order.Driver)
+                .Where(order =>
+                    order.orderStatus == OrderStatus.Delivered &&
+                    order.DeliveryTime >= start &&
+                    order.DeliveryTime <= end);
 
-            return profit;
+            var totalRevenue = await delivered.SumAsync(order => order.FinalPrice);
+            var driverProfit = await delivered.SumAsync(order =>
+                order.DriverAmount > 0
+                    ? order.DriverAmount
+                    : order.FinalPrice * (
+                        order.Driver != null && order.Driver.CommissionRate > 0
+                            ? order.Driver.CommissionRate
+                            : RevenueSplit.DefaultDriverCommissionRate));
+            var fundEntities = await _companyFundService.GetActiveEntitiesAsync();
+            var breakdown = RevenueSplit.Calculate(totalRevenue, driverProfit, fundEntities);
+            return breakdown.Funds.Count > 0
+                ? breakdown.CompanyAllocatedTotal
+                : breakdown.RemainingAfterDrivers;
         }
 
         public async Task<int> GetTotalUsersAsync()
-        {
-            return await _dbContext.CountAsync<User>();
-        }
+            => await _dbContext.CountAsync<User>();
+
         public async Task<int> GetActiveUsersAsync()
-        {
-            return await _dbContext.CountAsync<User>(x => x.IsActive == true);
-        }
+            => await _dbContext.CountAsync<User>(x => x.IsActive == true);
+
         public async Task<int> GetinActiveUsersAsync()
-        {
-            return await _dbContext.CountAsync<User>(x => x.IsActive == false);
-        }
-
-
-
+            => await _dbContext.CountAsync<User>(x => x.IsActive == false);
 
         public async Task<int> GetTotalDriversAsync()
-        {
-            return await _dbContext.CountAsync<Driver>();
-        }
+            => await _dbContext.CountAsync<Driver>();
+
         public async Task<int> GetTotalCustomersAsync()
-        {
-            return await _dbContext.CountAsync<Customer>();
-        }
+            => await _dbContext.CountAsync<Customer>();
 
-
-        // Order Dashboard
         public async Task<int> GetTotalOrdersAsync()
         {
-            return await _dbContext.CountAsync<Order>();
+            var (start, end) = await ResolveRangeAsync(null, null);
+            return await _dbContext.CountAsync<Order>(o => o.DeliveryTime >= start && o.DeliveryTime <= end);
         }
+
         public async Task<int> GetDliveriedOrdersAsync()
         {
-            return await _dbContext.CountAsync<Order>(x=>x.orderStatus==OrderStatus.Delivered);
+            var (start, end) = await ResolveRangeAsync(null, null);
+            return await _dbContext.CountAsync<Order>(x =>
+                x.orderStatus == OrderStatus.Delivered &&
+                x.DeliveryTime >= start &&
+                x.DeliveryTime <= end);
         }
+
         public async Task<int> GetCancelledOrdersAsync()
         {
-            return await _dbContext.CountAsync<Order>(x => x.orderStatus == OrderStatus.Canceled);
+            var (start, end) = await ResolveRangeAsync(null, null);
+            return await _dbContext.CountAsync<Order>(x =>
+                x.orderStatus == OrderStatus.Canceled &&
+                x.DeliveryTime >= start &&
+                x.DeliveryTime <= end);
         }
+
         public async Task<int> GetProcessingOrdersAsync()
         {
-            return await _dbContext.CountAsync<Order>(x => x.orderStatus == OrderStatus.Processing);
+            var (start, end) = await ResolveRangeAsync(null, null);
+            return await _dbContext.CountAsync<Order>(x =>
+                x.orderStatus == OrderStatus.Processing &&
+                x.DeliveryTime >= start &&
+                x.DeliveryTime <= end);
         }
-
-
-
-
-
     }
-
 }

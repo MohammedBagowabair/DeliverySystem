@@ -23,6 +23,40 @@ namespace Infrastructure.Configurations.Validators
                    .HasColumnType("decimal(18,2)")
                    .IsRequired();
 
+            builder.Property(order => order.DiscountType)
+                   .IsRequired()
+                   .HasDefaultValue(Domain.Enums.DiscountType.None);
+
+            builder.Property(order => order.DiscountValue)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
+            builder.Property(order => order.DiscountAmount)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
+            builder.Property(order => order.DriverCommissionRate)
+                   .HasColumnType("decimal(5,4)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
+            builder.Property(order => order.DriverAmount)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
+            builder.Property(order => order.CompanyGrossAmount)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
+            builder.Property(order => order.CompanyNetAmount)
+                   .HasColumnType("decimal(18,2)")
+                   .IsRequired()
+                   .HasDefaultValue(0m);
+
             builder.Property(order => order.FinalPrice)
                    .HasColumnType("decimal(18,2)")
                    .IsRequired();
@@ -33,6 +67,14 @@ namespace Infrastructure.Configurations.Validators
 
             builder.Property(order => order.Notice)
                    .HasMaxLength(500);
+
+            builder.Property(order => order.DriverName)
+                   .IsRequired()
+                   .HasMaxLength(200);
+
+            builder.Property(order => order.CustomerName)
+                   .IsRequired()
+                   .HasMaxLength(200);
 
             // Restrict: deleting a driver/customer must not wipe historical orders
             builder.HasOne(x => x.Driver)
@@ -47,8 +89,18 @@ namespace Infrastructure.Configurations.Validators
                    .OnDelete(DeleteBehavior.Restrict)
                    .IsRequired();
 
+            builder.HasOne(x => x.CreatedByUser)
+                   .WithMany()
+                   .HasForeignKey(x => x.CreatedByUserId)
+                   .OnDelete(DeleteBehavior.SetNull)
+                   .IsRequired(false);
+
             builder.HasIndex(x => x.CustomerId);
             builder.HasIndex(x => x.DriverId);
+            builder.HasIndex(x => x.CreatedByUserId);
+            builder.HasIndex(x => x.DeliveryTime);
+            builder.HasIndex(x => x.orderStatus);
+            builder.HasIndex(x => new { x.DeliveryTime, x.orderStatus });
         }
     }
 }

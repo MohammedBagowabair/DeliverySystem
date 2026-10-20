@@ -20,7 +20,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+    [Authorize(Roles = AppPermissions.CustomersAccess)]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _service;
@@ -36,7 +36,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet("GetAll")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.CustomersAccess)]
         public async Task<ApiResultModel<IEnumerable<CustomerDTO>>> GetAllAsync()
         {
             try
@@ -53,13 +53,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<IEnumerable<CustomerDTO>>(500, ex.Message, []);
+                return new ApiResultModel<IEnumerable<CustomerDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, []);
             }
             
         }
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.CustomersAccess)]
         public async Task<ApiResultModel<CustomerDTO>> GetAsync(int id)
         {
             try
@@ -68,6 +68,8 @@ namespace WebApi.Controllers
                 var result = await _mediator.Send(getCustomerByIdQuery);
 
                 var resultDto = _mapper.Map<CustomerDTO>(result);
+                if (resultDto is null)
+                    return new ApiResultModel<CustomerDTO>(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE, "السجل غير موجود", null);
                 return new ApiResultModel<CustomerDTO>(resultDto);
             }
             catch (DeliveryCoreException ex)
@@ -78,13 +80,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<CustomerDTO>(500, ex.Message, null);
+                return new ApiResultModel<CustomerDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
 
         }
 
         [HttpPost]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.CustomersAccess)]
         public async Task<ApiResultModel<CreateUpdateCustomerDTO>> AddAsync(CreateUpdateCustomerDTO createCustomerDTO)
         {
            
@@ -106,12 +108,12 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<CreateUpdateCustomerDTO>(500, ex.Message, null);
+                return new ApiResultModel<CreateUpdateCustomerDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
         }
 
         [HttpPut]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.CustomersAccess)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateCustomerDTO createUpdateCustomerDTO)
         {
             try
@@ -132,13 +134,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
             
         }
 
         [HttpDelete]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.CustomersAccess)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id) 
         {
             try
@@ -155,7 +157,7 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
             
         }
@@ -179,7 +181,7 @@ namespace WebApi.Controllers
         //    catch (Exception ex)
         //    {
         //        //_logger.LogWarning(ex, "")
-        //        return new ApiResultModel<PagedList<Customer>>(500, ex.Message, null);
+        //        return new ApiResultModel<PagedList<Customer>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
         //    }
 
         //}
@@ -201,7 +203,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<PagedList<CustomerDTO>>(500, ex.Message, null);
+                return new ApiResultModel<PagedList<CustomerDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
         }
     }

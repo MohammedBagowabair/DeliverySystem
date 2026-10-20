@@ -10,9 +10,9 @@ namespace Infrastructure.Configurations.Validators
         {
             // Configure CommissionRate property
             builder.Property(x => x.CommissionRate)
-                   .IsRequired()  // Ensure it's not nullable
-                   .HasColumnType("decimal(3, 2)")  // Precision for values between 0.00 and 1.00
-                   .HasDefaultValue(0);  // Set a default if needed
+                   .IsRequired()
+                   .HasColumnType("decimal(3, 2)")
+                   .HasDefaultValue(0.70m);
 
             // Configure Shift property
             builder.Property(x => x.Shift)
@@ -20,6 +20,7 @@ namespace Infrastructure.Configurations.Validators
                    .HasMaxLength(10);
 
             // Relationship configured on Order (Restrict delete)
+            builder.HasIndex(x => x.PhoneNumber1);
         }
     }
 }

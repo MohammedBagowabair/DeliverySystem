@@ -11,286 +11,342 @@ namespace Application.Services
 {
     public class PdfGeneratorService : IPdfGeneratorService
     {
+        private static readonly CultureInfo YemenCulture = CreateYemenMoneyCulture();
+        private static readonly CultureInfo ArabicCulture = new("ar-SA");
+        private static readonly CultureInfo EnglishCulture = new("en-US");
+
+        private static CultureInfo CreateYemenMoneyCulture()
+        {
+            var culture = (CultureInfo)CultureInfo.GetCultureInfo("ar-YE").Clone();
+            culture.NumberFormat.CurrencySymbol = "ر.ي";
+            culture.NumberFormat.CurrencyDecimalDigits = 0;
+            culture.NumberFormat.CurrencyPositivePattern = 3;
+            culture.NumberFormat.CurrencyNegativePattern = 8;
+            return culture;
+        }
+
+        // Print-friendly brand palette (deep navy + soft slate — readable on paper)
+        private static readonly string Brand = "#1E3A5F";
+        private static readonly string BrandSoft = "#E8EEF5";
+        private static readonly string Accent = "#2E7D6F";
+        private static readonly string AccentSoft = "#E6F4F1";
+        private static readonly string Danger = "#B42318";
+        private static readonly string DangerSoft = "#FCEBEA";
+        private static readonly string Line = "#D0D7E2";
+        private static readonly string Muted = "#5B6B7C";
+        private static readonly string Zebra = "#F7F9FC";
+
+        private readonly ICompanyFundService _companyFundService;
+
+        public PdfGeneratorService(ICompanyFundService companyFundService)
+        {
+            _companyFundService = companyFundService;
+        }
 
         public byte[] GenerateOrderPdf(List<Order> orders, string reportMessage, string? driverName = null)
         {
-            // Set QuestPDF license (Community version is free)
             QuestPDF.Settings.License = LicenseType.Community;
 
             try
             {
-                // Get current date and time
-                //string currentDateTime = DateTime.Now.ToString("dddd, dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
-                var now = DateTime.Now;
+                var now = YemenTime.Now;
+                var arabicDateTime = now.ToString("dddd، dd MMMM yyyy - hh:mm tt", ArabicCulture);
+                var englishDateTime = now.ToString("yyyy/MM/dd - hh:mm tt", EnglishCulture);
 
-                string arabicDateTime = now.ToString("dddd، dd MMMM yyyy - hh:mm tt", new CultureInfo("ar-SA"));
-                string englishDateTime = now.ToString("yyyy/MM/dd - hh:mm tt", new CultureInfo("en-US"));
+                var deliveredOrders = orders
+                    .Where(o => o.orderStatus == OrderStatus.Delivered)
+                    .OrderBy(o => o.DeliveryTime)
+                    .ThenBy(o => o.Id)
+                    .ToList();
 
+                var totalOrders = deliveredOrders.Count;
+                var totalRevenue = deliveredOrders.Sum(o => o.FinalPrice);
+                var driversProfit = deliveredOrders.Sum(o =>
+                    OrderRevenueCalculator.ResolveDriverProfit(
+                        o.DriverAmount,
+                        o.FinalPrice,
+                        o.Driver?.CommissionRate ?? o.DriverCommissionRate));
+                var fundEntities = _companyFundService.GetActiveEntitiesAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                var breakdown = RevenueSplit.Calculate(totalRevenue, driversProfit, fundEntities);
 
+                var title = string.IsNullOrWhiteSpace(reportMessage) || reportMessage == "Orders"
+                    ? "تقرير الطلبات المسلّمة"
+                    : reportMessage.Trim();
+                var resolvedDriver = ResolveDriverLabel(driverName);
 
-                // Filter orders that are delivered
-                var deliveredOrders = orders.Where(o => o.orderStatus == OrderStatus.Delivered).ToList();
-
-                // Calculate totals for delivered orders
-                int totalOrders = deliveredOrders.Count;
-                decimal totalRevenue = deliveredOrders.Sum(o => o.FinalPrice);
-                decimal companyProfit = Helpers.RevenueSplit.CompanyProfit(totalRevenue);
-                decimal companyExpinses = Helpers.RevenueSplit.Expenses(totalRevenue);
-                decimal driversProfit = Helpers.RevenueSplit.DriverProfit(totalRevenue);
+                var periodStart = deliveredOrders.FirstOrDefault()?.DeliveryTime;
+                var periodEnd = deliveredOrders.LastOrDefault()?.DeliveryTime;
 
                 return Document.Create(container =>
                 {
                     container.Page(page =>
                     {
-                        page.Size(PageSizes.A3); // Set page size to A3
-                        page.Margin(30);
-                        page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(14)); // Default text style
+                        page.Size(PageSizes.A4.Landscape());
+                        page.Margin(24);
+                        page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(10).FontColor(Brand));
+                        page.ContentFromRightToLeft();
 
-                        // Header Section
-                        page.Header().Row(row =>
+                        page.Header().Element(h => ComposeHeader(
+                            h, title, resolvedDriver, arabicDateTime, englishDateTime, periodStart, periodEnd, totalOrders));
+
+                        page.Content().PaddingTop(14).Column(col =>
                         {
-                            row.RelativeColumn().AlignLeft().Column(col =>
+                            col.Spacing(14);
+
+                            if (deliveredOrders.Count == 0)
                             {
-                                col.Item().Text("\u200F" + arabicDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
-                                col.Item().Text(englishDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
-
-                                //col.Item().Text("\u200F" + currentDateTime).FontSize(14).Italic().FontColor(Colors.Grey.Darken1);
-                                col.Item().Text("\u200F" + "الموصل: " + driverName).FontSize(16).Bold().FontColor(Colors.Black);
-                            });
-
-                            row.RelativeColumn().AlignRight().Column(col =>
-                            {
-                                //col.Item().Image("path/to/company/logo.png", ImageScaling.FitArea); // Add company logo
-                                col.Item().Text("Go Delivery").FontSize(30).Bold().FontColor(Colors.Blue.Darken3);
-                            });
-                        });
-
-                        // Table Section
-                        page.Content().Column(col =>
-                        {
-                            col.Item().Table(table =>
-                            {
-                                // Define table columns
-                                table.ColumnsDefinition(columns =>
-                                {
-                                    for (int i = 0; i < 8; i++) columns.RelativeColumn();
-                                });
-
-                                // Table Header
-                                table.Header(header =>
-                                {
-                                    //header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fملاحظه").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fعنوان الطلب").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fطريقة الدفع").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالسعر النهائي").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالوقت").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالحالة").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالعميل").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fالموصل").Bold();
-                                    header.Cell().Border(0.5f).BorderColor(Colors.Black).Padding(4).AlignRight().Text("\u200Fرقم الطلب").Bold();
-                                });
-
-                                // Table Body (Order Data) with alternating row colors
-                                for (int i = 0; i < deliveredOrders.Count; i++)
-                                {
-                                    var order = deliveredOrders[i];
-                                    var backgroundColor = i % 2 == 0 ? Colors.Grey.Lighten3 : Colors.White;
-
-                                    //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                    //.Text("\u200F" + order.Notice).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + order.Title).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString())).FontSize(10);
-                                    //table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                    //    .Text("\u200F$" + order.FinalPrice.ToString("F2")).FontSize(10);
-                                    var yemeniCulture = new CultureInfo("ar-YE");
-
-                                    table.Cell()
-                                        .Background(backgroundColor)
-                                        .Border(0.5f)
-                                        .BorderColor(Colors.Black)
-                                        .Padding(3)
-                                        .AlignRight()
-                                        .Text($"\u200F{order.FinalPrice.ToString("C2", yemeniCulture)}")
-                                        .FontSize(10);
-
-
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + order.DeliveryTime.ToString("dd/MM/yyyy", new CultureInfo("en-US"))).FontSize(10); // Updated to English calendar
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + OrderHelper.GetOrderStatusInArabic(order.orderStatus.ToString())).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + (order.Customer?.FullName ?? "غير متوفر")).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + (order.Driver?.FullName ?? "غير متوفر")).FontSize(10);
-                                    table.Cell().Background(backgroundColor).Border(0.5f).BorderColor(Colors.Black).Padding(3).AlignRight()
-                                        .Text("\u200F" + order.Id.ToString()).FontSize(10);
-                                }
-                            });
-
-                            // Summary Section
-                            if (string.Equals(driverName?.Trim(), "جميع الموصلين", StringComparison.Ordinal))
-                            {
-                                col.Item().PaddingTop(20).Column(summary =>
-                                {
-                                    var yemeniCulture = new CultureInfo("ar-YE");
-
-                                    summary.Item().AlignCenter().Text("عدد الطلبات: " + totalOrders).FontSize(16).Bold();
-
-                                    summary.Item().AlignCenter()
-                                        .Text("إجمالي الإيرادات: " + totalRevenue.ToString("C2", yemeniCulture))
-                                        .FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
-
-                                    summary.Item().AlignCenter()
-                                        .Text(" صافي ربح الشركه : " + companyProfit.ToString("C2", yemeniCulture))
-                                        .FontSize(16).Bold().FontColor(Colors.Black);
-                                    summary.Item().AlignCenter()
-                                     .Text("الصندوق: " + companyExpinses.ToString("C2", yemeniCulture))
-                                     .FontSize(16).Bold().FontColor(Colors.Black);
-
-                                    summary.Item().AlignCenter()
-                                        .Text("نسبه الموصل: " + driversProfit.ToString("C2", yemeniCulture))
-                                        .FontSize(16).Bold().FontColor(Colors.Red.Darken2);
-
-                                });
-
+                                col.Item()
+                                    .Border(1).BorderColor(Line)
+                                    .Background(BrandSoft)
+                                    .Padding(24)
+                                    .AlignCenter()
+                                    .Text("لا توجد طلبات مسلّمة ضمن هذه الفترة.")
+                                    .FontSize(13).FontColor(Muted);
                             }
                             else
                             {
-                                col.Item().PaddingTop(20).Column(summary =>
-                                {
-                                    var yemeniCulture = new CultureInfo("ar-YE");
-
-                                    summary.Item().AlignCenter().Text("إجمالي الطلبات: " + totalOrders).FontSize(16).Bold();
-
-                                    summary.Item().AlignCenter()
-                                    .Text("الاداره : " + (companyProfit+ companyExpinses).ToString("C2", yemeniCulture))
-                                    .FontSize(16).Bold().FontColor(Colors.Black);
-
-                                    summary.Item().AlignCenter()
-                                        .Text("نسبه الموصل: " + driversProfit.ToString("C2", yemeniCulture))
-                                        .FontSize(16).Bold().FontColor(Colors.Red.Darken2);
-
-                                });
-
+                                col.Item().Element(e => ComposeOrdersTable(e, deliveredOrders));
                             }
+
+                            col.Item().Element(e => ComposeSummary(e, totalOrders, totalRevenue, driversProfit, breakdown));
                         });
+
+                        page.Footer().Element(ComposeFooter);
                     });
                 }).GeneratePdf();
             }
             catch (Exception ex)
             {
-                throw new Exception("Error generating PDF: " + ex.Message);
+                throw new Exception("خطأ في إنشاء ملف PDF: " + ex.Message, ex);
             }
         }
 
+        private static void ComposeHeader(
+            IContainer container,
+            string title,
+            string driverLabel,
+            string arabicDateTime,
+            string englishDateTime,
+            DateTime? periodStart,
+            DateTime? periodEnd,
+            int totalOrders)
+        {
+            container.Column(col =>
+            {
+                col.Item().Background(Brand).PaddingVertical(14).PaddingHorizontal(16).Row(row =>
+                {
+                    row.RelativeItem().AlignMiddle().Column(c =>
+                    {
+                        c.Item().Text("Go Delivery · جو دليفري")
+                            .FontSize(20).Bold().FontColor(Colors.White);
+                        c.Item().PaddingTop(2).Text(title)
+                            .FontSize(12).FontColor("#B8C9DC");
+                    });
 
-        //public byte[] GenerateDriversPdf(List<Order> orders, string reportMessage, string driverName, decimal driverProfit, decimal companyRevenue, decimal companyProfit, DateTime? startDate = null, DateTime? endDate = null)
-        //{
-        //    try
-        //    {
-        //        using var memoryStream = new MemoryStream();
+                    row.ConstantItem(210).AlignMiddle().AlignLeft().Column(c =>
+                    {
+                        c.Item().AlignLeft().Text(arabicDateTime)
+                            .FontSize(9).FontColor("#D7E2EF");
+                        c.Item().AlignLeft().Text(englishDateTime)
+                            .FontSize(9).FontColor("#D7E2EF");
+                    });
+                });
 
-        //        // Create a PdfWriter to write the PDF into the memory stream
-        //        using var pdfWriter = new PdfWriter(memoryStream);
-        //        using var pdfDocument = new PdfDocument(pdfWriter);
+                col.Item().Background(BrandSoft).BorderBottom(1).BorderColor(Line)
+                    .PaddingVertical(10).PaddingHorizontal(16)
+                    .Row(row =>
+                    {
+                        row.RelativeItem().Text(text =>
+                        {
+                            text.Span("الموصل: ").FontColor(Muted).FontSize(10);
+                            text.Span(driverLabel).Bold().FontSize(11).FontColor(Brand);
+                        });
 
-        //        // Create a document for adding content to the PDF
-        //        var document = new Document(pdfDocument);
+                        row.RelativeItem().AlignCenter().Text(text =>
+                        {
+                            text.Span("الفترة: ").FontColor(Muted).FontSize(10);
+                            text.Span(FormatPeriod(periodStart, periodEnd)).Bold().FontSize(10).FontColor(Brand);
+                        });
 
-        //        // Load Arabic font (replace with the path to your Arabic font file)
-        //        var fontPath = "path/to/arabic-font.ttf"; // Example: "fonts/arial.ttf"
-        //        var arabicFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
+                        row.RelativeItem().AlignLeft().Text(text =>
+                        {
+                            text.Span("عدد المسلّم: ").FontColor(Muted).FontSize(10);
+                            text.Span(totalOrders.ToString("N0")).Bold().FontSize(11).FontColor(Accent);
+                        });
+                    });
+            });
+        }
 
-        //        // Set document direction to RTL
-        //        document.SetProperty(Property.TEXT_ALIGNMENT, TextAlignment.RIGHT);
+        private static void ComposeOrdersTable(IContainer container, List<Order> deliveredOrders)
+        {
+            container.Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(2.2f); // عنوان
+                    columns.RelativeColumn(1.1f); // دفع
+                    columns.RelativeColumn(1.3f); // سعر
+                    columns.RelativeColumn(1.1f); // عمولة
+                    columns.RelativeColumn(1.2f); // تاريخ
+                    columns.RelativeColumn(1.0f); // حالة
+                    columns.RelativeColumn(1.6f); // عميل
+                    columns.RelativeColumn(1.6f); // موصل
+                    columns.ConstantColumn(48);   // رقم
+                });
 
-        //        // Add Company Name
-        //        document.Add(new Paragraph("جو دليفري") // "Go Delivery" in Arabic
-        //            .SetTextAlignment(TextAlignment.CENTER)
-        //            .SetFontSize(18)
-        //            .SetFont(arabicFont));
+                table.Header(header =>
+                {
+                    HeaderCell(header.Cell(), "عنوان الطلب");
+                    HeaderCell(header.Cell(), "طريقة الدفع");
+                    HeaderCell(header.Cell(), "السعر");
+                    HeaderCell(header.Cell(), "عمولة الموصل");
+                    HeaderCell(header.Cell(), "التاريخ");
+                    HeaderCell(header.Cell(), "الحالة");
+                    HeaderCell(header.Cell(), "العميل");
+                    HeaderCell(header.Cell(), "الموصل");
+                    HeaderCell(header.Cell(), "#");
+                });
 
-        //        // Add Report Title
-        //        document.Add(new Paragraph(reportMessage) // Assuming reportMessage is already in Arabic
-        //            .SetTextAlignment(TextAlignment.CENTER)
-        //            .SetFontSize(14)
-        //            .SetFont(arabicFont));
+                for (var i = 0; i < deliveredOrders.Count; i++)
+                {
+                    var order = deliveredOrders[i];
+                    var bg = i % 2 == 0 ? Zebra : "#FFFFFF";
+                    var commission = OrderRevenueCalculator.ResolveDriverProfit(
+                        order.DriverAmount,
+                        order.FinalPrice,
+                        order.Driver?.CommissionRate ?? order.DriverCommissionRate);
 
-        //        // Add Driver Name and Date Range
-        //        document.Add(new Paragraph($"السائق: {driverName}") // "Driver: {driverName}" in Arabic
-        //            .SetTextAlignment(TextAlignment.RIGHT)
-        //            .SetFontSize(12)
-        //            .SetFont(arabicFont));
+                    BodyCell(table.Cell(), bg, order.Title);
+                    BodyCell(table.Cell(), bg, OrderHelper.GetPaymentMethodInArabic(order.PaymentMethod.ToString()));
+                    BodyCell(table.Cell(), bg, order.FinalPrice.ToString("C0", YemenCulture), bold: true);
+                    BodyCell(table.Cell(), bg, commission.ToString("C0", YemenCulture));
+                    BodyCell(table.Cell(), bg, order.DeliveryTime.ToString("dd/MM/yyyy", EnglishCulture));
+                    BodyCell(table.Cell(), bg, OrderHelper.GetOrderStatusInArabic(order.orderStatus.ToString()), accent: true);
+                    BodyCell(table.Cell(), bg, !string.IsNullOrWhiteSpace(order.CustomerName)
+                        ? order.CustomerName
+                        : (order.Customer?.FullName ?? "—"));
+                    BodyCell(table.Cell(), bg, !string.IsNullOrWhiteSpace(order.DriverName)
+                        ? order.DriverName
+                        : (order.Driver?.FullName ?? "—"));
+                    BodyCell(table.Cell(), bg, order.Id.ToString(), muted: true);
+                }
+            });
+        }
 
-        //        document.Add(new Paragraph($"تاريخ البدء: {startDate:yyyy-MM-dd}   |   تاريخ الانتهاء: {endDate:yyyy-MM-dd}   |   تم الإنشاء في: {DateTime.Now:yyyy-MM-dd}")
-        //            .SetTextAlignment(TextAlignment.RIGHT)
-        //            .SetFontSize(12)
-        //            .SetFont(arabicFont));
+        private static void ComposeSummary(
+            IContainer container,
+            int totalOrders,
+            decimal totalRevenue,
+            decimal driversProfit,
+            CompanyProfitBreakdown breakdown)
+        {
+            container.Column(col =>
+            {
+                col.Item().PaddingBottom(8).Text("الملخص المالي")
+                    .FontSize(13).Bold().FontColor(Brand);
 
-        //        // Add some space before the table
-        //        document.Add(new Paragraph("\n"));
+                col.Item().Row(row =>
+                {
+                    row.Spacing(10);
+                    SummaryCard(row.RelativeItem(), "عدد الطلبات", totalOrders.ToString("N0"), Brand, BrandSoft);
+                    SummaryCard(row.RelativeItem(), "إجمالي الإيرادات (100٪)", totalRevenue.ToString("C0", YemenCulture), Brand, BrandSoft);
+                    SummaryCard(row.RelativeItem(), "نسبة المندوب (70٪)",
+                        driversProfit.ToString("C0", YemenCulture), Danger, DangerSoft);
+                    SummaryCard(row.RelativeItem(), "نسبة الإدارة (30٪)",
+                        breakdown.RemainingAfterDrivers.ToString("C0", YemenCulture), Accent, AccentSoft);
+                });
 
-        //        // Define the table structure
-        //        var table = new Table(new float[] { 1, 3, 3, 3, 2, 2, 2, 2 })
-        //            .UseAllAvailableWidth();
+            });
+        }
 
-        //        // Add headers with smaller font size
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("المعرف").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("العميل").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("السائق").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("الوقت").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("العنوان").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("السعر النهائي").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("طريقة الدفع").SetFont(arabicFont)).SetFontSize(10));
-        //        table.AddHeaderCell(new Cell().Add(new Paragraph("الحالة").SetFont(arabicFont)).SetFontSize(10));
+        private static void ComposeFooter(IContainer container)
+        {
+            container.BorderTop(1).BorderColor(Line).PaddingTop(8).Row(row =>
+            {
+                row.RelativeItem().AlignMiddle().Text("Go Delivery — تقرير داخلي سري")
+                    .FontSize(8).FontColor(Muted);
 
-        //        // Add rows with smaller font size
-        //        foreach (var order in orders)
-        //        {
-        //            table.AddCell(new Cell().Add(new Paragraph(order.Id.ToString()).SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.Customer?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.Driver?.FullName ?? "غير متاح").SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.DeliveryTime.ToString("yyyy-MM-dd HH:mm")).SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.Title).SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph($"${order.FinalPrice:F2}").SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.PaymentMethod.ToString()).SetFont(arabicFont)).SetFontSize(9));
-        //            table.AddCell(new Cell().Add(new Paragraph(order.orderStatus.ToString()).SetFont(arabicFont)).SetFontSize(9));
-        //        }
+                row.RelativeItem().AlignCenter().AlignMiddle().Text(text =>
+                {
+                    text.Span("صفحة ").FontSize(8).FontColor(Muted);
+                    text.CurrentPageNumber().FontSize(8).FontColor(Brand).Bold();
+                    text.Span(" / ").FontSize(8).FontColor(Muted);
+                    text.TotalPages().FontSize(8).FontColor(Brand).Bold();
+                });
 
-        //        // Add table to the document
-        //        document.Add(table);
+                row.RelativeItem().AlignLeft().AlignMiddle()
+                    .Text("بتوقيت اليمن (UTC+3)")
+                    .FontSize(8).FontColor(Muted);
+            });
+        }
 
-        //        // Add a line break before the summary section
-        //        document.Add(new Paragraph("\n"));
+        private static void HeaderCell(IContainer container, string text)
+        {
+            container
+                .Background(Brand)
+                .BorderBottom(2).BorderColor(Accent)
+                .PaddingVertical(7).PaddingHorizontal(6)
+                .AlignRight()
+                .Text(text)
+                .FontSize(9).Bold().FontColor(Colors.White);
+        }
 
-        //        // Add summary section
-        //        var summaryTable = new Table(new float[] { 4, 4 }) // Two-column table
-        //            .UseAllAvailableWidth();
+        private static void BodyCell(
+            IContainer container,
+            string background,
+            string text,
+            bool bold = false,
+            bool muted = false,
+            bool accent = false)
+        {
+            var cell = container
+                .Background(background)
+                .BorderBottom(0.5f).BorderColor(Line)
+                .PaddingVertical(5).PaddingHorizontal(6)
+                .AlignRight();
 
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph("ربح السائق:").SetFont(arabicFont)).SetFontSize(10));
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${driverProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
+            var style = cell.Text(text ?? "—").FontSize(9);
+            if (bold) style.Bold().FontColor(Brand);
+            else if (accent) style.FontColor(Accent).Bold();
+            else if (muted) style.FontColor(Muted);
+            else style.FontColor("#243447");
+        }
 
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph("إيرادات الشركة:").SetFont(arabicFont)).SetFontSize(10));
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyRevenue:F2}").SetFont(arabicFont)).SetFontSize(10));
+        private static void SummaryCard(IContainer container, string label, string value, string color, string soft)
+        {
+            container.Background(soft).Border(1).BorderColor(Line).Padding(12).Column(c =>
+            {
+                c.Item().Text(label).FontSize(9).FontColor(Muted);
+                c.Item().PaddingTop(4).Text(value).FontSize(13).Bold().FontColor(color);
+            });
+        }
 
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph("ربح الشركة:").SetFont(arabicFont)).SetFontSize(10));
-        //        summaryTable.AddCell(new Cell().Add(new Paragraph($"${companyProfit:F2}").SetFont(arabicFont)).SetFontSize(10));
+        private static void MiniStat(IContainer container, string label, string value)
+        {
+            container.Column(c =>
+            {
+                c.Item().AlignCenter().Text(label).FontSize(8).FontColor(Muted);
+                c.Item().AlignCenter().PaddingTop(2).Text(value).FontSize(11).Bold().FontColor(Brand);
+            });
+        }
 
-        //        document.Add(summaryTable);
+        private static string FormatPeriod(DateTime? start, DateTime? end)
+        {
+            if (start == null || end == null)
+                return "—";
+            if (start.Value.Date == end.Value.Date)
+                return start.Value.ToString("dd/MM/yyyy", EnglishCulture);
+            return $"{start.Value:dd/MM/yyyy} – {end.Value:dd/MM/yyyy}";
+        }
 
-        //        // Close the document to finalize the PDF
-        //        document.Close();
+        private static string ResolveDriverLabel(string? driverName)
+        {
+            if (string.IsNullOrWhiteSpace(driverName) || driverName.Contains('?'))
+                return "جميع الموصلين";
+            return driverName.Trim();
+        }
 
-        //        // Return the byte array representing the PDF
-        //        return memoryStream.ToArray();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Handle any errors that might occur during PDF generation
-        //        throw new Exception("خطأ في إنشاء ملف PDF: " + ex.Message); // "Error generating PDF" in Arabic
-        //    }
-        //}
+        private static bool IsAllDrivers(string driverLabel)
+            => string.Equals(driverLabel, "جميع الموصلين", StringComparison.Ordinal);
     }
 }

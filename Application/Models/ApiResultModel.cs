@@ -17,7 +17,7 @@ namespace Application.Common.Models
             Content = content;
         }
 
-        public ApiResultModel(T contet) : this(0, "Success", contet)
+        public ApiResultModel(T contet) : this(0, "نجاح", contet)
         {
 
         }
@@ -29,23 +29,17 @@ namespace Application.Common.Models
 
         public ApiResultModel(Exception exception)
         {
-            Code = 500;
-            Message = ApiResultModel<T>.HandleInnerExceptions(exception);
-            if (exception is DeliveryCoreException ex)
+            if (exception is DeliveryCoreException domain)
             {
-                Code = ex.Code;
-                Error = (exception as DeliveryCoreException).Data;
+                Code = domain.Code;
+                Message = domain.Message;
+                Error = domain.Data;
             }
-        }
-
-        private static string? HandleInnerExceptions(Exception exception)
-        {
-            if (exception == null)
+            else
             {
-                return null;
+                Code = ErrorCodes.SYS_UNKNOWN_ERROR_CODE;
+                Message = ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE;
             }
-
-            return $"{exception.Message}{(!string.IsNullOrEmpty(ApiResultModel<T>.HandleInnerExceptions(exception.InnerException)) ? $"{Environment.NewLine}{ApiResultModel<T>.HandleInnerExceptions(exception.InnerException)}" : "")}";
         }
     }
 }

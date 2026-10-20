@@ -1,4 +1,5 @@
 ﻿
+using Application.DTO.OrderDtos;
 using Application.DTO.ReportsDto;
 using Application.Helpers;
 using Application.Interfaces;
@@ -14,9 +15,23 @@ namespace Application.Services
     public class OrderService : IOrderService
     {
         public  IApplicationDbContext _dbContext;
-        public OrderService(IApplicationDbContext dbContext)
+        private readonly ICompanyFundService _companyFundService;
+        private readonly IDayCloseService _dayCloseService;
+        private readonly IYearCloseService _yearCloseService;
+        private readonly IBusinessDayService _businessDayService;
+
+        public OrderService(
+            IApplicationDbContext dbContext,
+            ICompanyFundService companyFundService,
+            IDayCloseService dayCloseService,
+            IYearCloseService yearCloseService,
+            IBusinessDayService businessDayService)
         {
             _dbContext = dbContext;
+            _companyFundService = companyFundService;
+            _dayCloseService = dayCloseService;
+            _yearCloseService = yearCloseService;
+            _businessDayService = businessDayService;
         }
         
         public async Task<IEnumerable<Order>> GetAll()
@@ -26,19 +41,54 @@ namespace Application.Services
 
         public async Task<Order> GetById(int id)
         {
-            return (await _dbContext.GetAsync<Order>(x => x.Id == id))?.FirstOrDefault();
+            return (await _dbContext.GetAsync<Order>(
+                x => x.Id == id,
+                q => q.Include(o => o.Customer)
+                      .Include(o => o.Driver)
+                      .Include(o => o.CreatedByUser)))?.FirstOrDefault();
         }
         public async Task<Order> Create(Order order)
         {
             order.orderStatus = OrderStatus.Processing;
-            // Keep client-provided DeliveryTime when set; otherwise stamp create time
-            if (order.DeliveryTime == default)
+
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+
+            // New orders belong to the controlled current business day (not calendar clock).
+            // Explicit past DeliveryTime is kept for forgotten historical backfill (closed-day check below).
+            if (order.DeliveryTime != default && order.DeliveryTime.Date < businessDate)
             {
-                order.DeliveryTime = DateTime.Now;
+                order.DeliveryTime = YemenTime.NoonOn(order.DeliveryTime);
             }
+            else
+            {
+                // default, same day, or calendar-ahead (e.g. Aug 22 while business day is still Aug 21)
+                order.DeliveryTime = businessDate == YemenTime.Today
+                    ? YemenTime.Now
+                    : YemenTime.NoonOn(businessDate);
+            }
+
+            if (await _dayCloseService.IsClosedAsync(order.DeliveryTime.Date))
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن إضافة طلبات ليوم {order.DeliveryTime:yyyy/MM/dd} لأنه مغلق ومؤرشف.",
+                    ErrorCodes.DB_UNABLE_TO_INSERT_RECORD_CODE,
+                    null);
+            }
+
+            if (await _yearCloseService.IsClosedAsync(order.DeliveryTime.Year))
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن إضافة طلبات لسنة {order.DeliveryTime.Year} لأنها مغلقة ومؤرشفة.",
+                    ErrorCodes.DB_UNABLE_TO_INSERT_RECORD_CODE,
+                    null);
+            }
+
+            await ApplyPartyNamesAsync(order);
+            await ApplyRevenueSnapshotAsync(order);
+
             return await _dbContext.AddAsync<Order>(order);
         }
-        public async Task Update(Order order)
+        public async Task Update(Order order, bool allowClosedDayEdit = false)
         {
             var existing = await GetById(order.Id)
                 ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
@@ -46,15 +96,44 @@ namespace Application.Services
             if (!OrderStatusTransitions.CanTransition(existing.orderStatus, order.orderStatus))
             {
                 throw new DeliveryCoreException(
-                    $"Cannot change order status from {existing.orderStatus} to {order.orderStatus}. Allowed: {OrderStatusTransitions.DescribeAllowed(existing.orderStatus)}.",
+                    $"لا يمكن تغيير حالة الطلب من {existing.orderStatus} إلى {order.orderStatus}. المسموح: {OrderStatusTransitions.DescribeAllowed(existing.orderStatus)}.",
                     ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
                     null);
             }
 
-            // DeliveryTime represents completion time once delivered
+            var orderDay = existing.DeliveryTime.Date;
+            var dayClosed = await _dayCloseService.IsClosedAsync(orderDay);
+            if (dayClosed && !allowClosedDayEdit)
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن تعديل الطلب بعد إغلاق يوم {orderDay:yyyy/MM/dd}. التعديل بعد الإغلاق متاح للمدير فقط.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            if (await _yearCloseService.IsClosedAsync(orderDay.Year))
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن تعديل الطلب بعد إغلاق سنة {orderDay.Year}.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            order.CustomerId = order.CustomerId == 0 ? existing.CustomerId : order.CustomerId;
+            order.DriverId = order.DriverId == 0 ? existing.DriverId : order.DriverId;
+            order.CreatedByUserId = existing.CreatedByUserId;
+            order.CustomerName = existing.CustomerName;
+            order.DriverName = existing.DriverName;
+
+            await EnsureDriverAssignedForDeliveryAsync(order.DriverId, order.orderStatus);
+
+            // Preserve historical DeliveryTime so previous-day deliveries stay on that day's reports.
+            // Only stamp Yemen now when delivering and the existing time is missing.
             if (existing.orderStatus != OrderStatus.Delivered && order.orderStatus == OrderStatus.Delivered)
             {
-                order.DeliveryTime = DateTime.Now;
+                order.DeliveryTime = existing.DeliveryTime != default
+                    ? existing.DeliveryTime
+                    : YemenTime.Now;
             }
             else if (order.orderStatus == OrderStatus.Processing && order.DeliveryTime == default)
             {
@@ -62,18 +141,194 @@ namespace Application.Services
             }
             else if (order.orderStatus != OrderStatus.Processing)
             {
-                // Preserve original create/completion time for non-processing edits
                 order.DeliveryTime = existing.DeliveryTime;
             }
 
-            order.CustomerId = order.CustomerId == 0 ? existing.CustomerId : order.CustomerId;
-            order.DriverId = order.DriverId == 0 ? existing.DriverId : order.DriverId;
+            if (order.CustomerId != existing.CustomerId || order.DriverId != existing.DriverId
+                || string.IsNullOrWhiteSpace(order.CustomerName) || string.IsNullOrWhiteSpace(order.DriverName))
+            {
+                await ApplyPartyNamesAsync(order);
+            }
+
+            await ApplyRevenueSnapshotAsync(order);
 
             _dbContext._dbContext.Set<Order>().Update(order);
             await _dbContext._dbContext.SaveChangesAsync();
+
+            // Keep closed-day archive totals accurate when Admin changes status after close.
+            if (dayClosed && allowClosedDayEdit)
+                await _dayCloseService.RefreshClosedDayTotalsAsync(orderDay);
         }
+
+        public async Task ResolvePreviousDayPendingAsync(int orderId, OrderStatus newStatus)
+        {
+            if (newStatus is not (OrderStatus.Delivered or OrderStatus.Canceled))
+            {
+                throw new DeliveryCoreException(
+                    "يُسمح فقط بتسليم أو رفض الطلبات المعلقة من أيام سابقة.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            var existing = await GetById(orderId)
+                ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
+
+            if (existing.orderStatus != OrderStatus.Processing)
+            {
+                throw new DeliveryCoreException(
+                    "الطلب ليس معلقاً (قيد المعالجة).",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            if (existing.DeliveryTime.Date >= businessDate)
+            {
+                throw new DeliveryCoreException(
+                    "هذا الطلب ليس من يوم عمل سابق.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            await EnsureDriverAssignedForDeliveryAsync(existing.DriverId, newStatus);
+
+            existing.orderStatus = newStatus;
+            if (string.IsNullOrWhiteSpace(existing.DriverName) || string.IsNullOrWhiteSpace(existing.CustomerName))
+                await ApplyPartyNamesAsync(existing);
+
+            // Keep original DeliveryTime for that historical day's financials
+            _dbContext._dbContext.Set<Order>().Update(existing);
+            await _dbContext._dbContext.SaveChangesAsync();
+        }
+
+        private async Task ApplyRevenueSnapshotAsync(Order order)
+        {
+            var rate = RevenueSplit.DefaultDriverCommissionRate;
+            if (order.DriverId > 0)
+            {
+                var driverRate = await _dbContext._dbContext.Set<Driver>()
+                    .AsNoTracking()
+                    .Where(d => d.Id == order.DriverId)
+                    .Select(d => d.CommissionRate)
+                    .FirstOrDefaultAsync();
+                if (driverRate > 0)
+                    rate = driverRate;
+            }
+
+            OrderRevenueCalculator.ApplyToOrder(order, rate);
+        }
+
+        private async Task ApplyPartyNamesAsync(Order order)
+        {
+            if (order.CustomerId > 0)
+            {
+                var customerName = await _dbContext._dbContext.Set<Customer>()
+                    .AsNoTracking()
+                    .Where(c => c.Id == order.CustomerId)
+                    .Select(c => c.FullName)
+                    .FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(customerName))
+                    order.CustomerName = customerName;
+            }
+
+            if (order.DriverId > 0)
+            {
+                var driverName = await _dbContext._dbContext.Set<Driver>()
+                    .AsNoTracking()
+                    .Where(d => d.Id == order.DriverId)
+                    .Select(d => d.FullName)
+                    .FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(driverName))
+                    order.DriverName = driverName;
+            }
+
+            order.CustomerName ??= string.Empty;
+            order.DriverName ??= string.Empty;
+        }
+
+        private async Task EnsureDriverAssignedForDeliveryAsync(int driverId, OrderStatus targetStatus)
+        {
+            if (targetStatus != OrderStatus.Delivered)
+                return;
+
+            if (driverId <= 0)
+            {
+                throw new DeliveryCoreException(
+                    "لا يمكن تسليم الطلب بدون تحديد موصل. يرجى اختيار موصل أولاً.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+
+            var driverExists = await _dbContext._dbContext.Set<Driver>()
+                .AsNoTracking()
+                .AnyAsync(d => d.Id == driverId);
+
+            if (!driverExists)
+            {
+                throw new DeliveryCoreException(
+                    "الموصل المحدد غير موجود. يرجى اختيار موصل صالح قبل التسليم.",
+                    ErrorCodes.DB_UNABLE_TO_UPDATE_RECORD_CODE,
+                    null);
+            }
+        }
+
+        public async Task<PreviousDayPendingOrdersData> GetPreviousDayPendingOrdersAsync()
+        {
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            var startOfBusinessDay = YemenTime.StartOfDay(businessDate);
+            var orders = await _dbContext._dbContext.Set<Order>()
+                .AsNoTracking()
+                .Include(o => o.Driver)
+                .Include(o => o.Customer)
+                .Include(o => o.CreatedByUser)
+                .Where(o =>
+                    o.orderStatus == OrderStatus.Processing &&
+                    o.DeliveryTime < startOfBusinessDay)
+                .OrderBy(o => o.DeliveryTime)
+                .ThenBy(o => o.Id)
+                .ToListAsync();
+
+            return new PreviousDayPendingOrdersData
+            {
+                YemenToday = businessDate,
+                Orders = orders
+            };
+        }
+
+        public async Task<int> CountPreviousDayPendingOrdersAsync()
+        {
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            var startOfBusinessDay = YemenTime.StartOfDay(businessDate);
+            return await _dbContext._dbContext.Set<Order>()
+                .CountAsync(o =>
+                    o.orderStatus == OrderStatus.Processing &&
+                    o.DeliveryTime < startOfBusinessDay);
+        }
+
         public async Task<bool> Delete(int id)
         {
+            var order = await _dbContext._dbContext.Set<Order>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == id)
+                ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
+
+            var businessDate = order.DeliveryTime.Date;
+            if (await _dayCloseService.IsClosedAsync(businessDate))
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن حذف طلب ليوم {businessDate:yyyy/MM/dd} لأنه مغلق ومؤرشف. الحذف يؤثر على حسابات الربح.",
+                    ErrorCodes.NOT_ALL_RECORDS_DELETED_CODE,
+                    null);
+            }
+
+            if (await _yearCloseService.IsClosedAsync(order.DeliveryTime.Year))
+            {
+                throw new DeliveryCoreException(
+                    $"لا يمكن حذف طلب لسنة {order.DeliveryTime.Year} لأنها مغلقة ومؤرشفة. الحذف يؤثر على حسابات الربح.",
+                    ErrorCodes.NOT_ALL_RECORDS_DELETED_CODE,
+                    null);
+            }
+
             return await _dbContext.DeleteAsync<Order>(id);
         }
         public async Task<int> CountAsync()
@@ -89,7 +344,9 @@ namespace Application.Services
         {
             searchTerm = searchTerm?.Trim()?.ToLower();
 
-            var today = OrderDateRanges.Today();
+            var activeYear = await _yearCloseService.GetActiveYearAsync();
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            var today = OrderDateRanges.Today(businessDate, activeYear);
             DateTime start = startDate ?? today.Start;
             DateTime end = endDate ?? today.End;
 
@@ -166,7 +423,9 @@ namespace Application.Services
         {
             searchTerm = searchTerm?.Trim()?.ToLower();
 
-            var week = OrderDateRanges.Last7Days();
+            var activeYear = await _yearCloseService.GetActiveYearAsync();
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            var week = OrderDateRanges.Last7Days(businessDate, activeYear);
             DateTime start = startDate ?? week.Start;
             DateTime end = endDate ?? week.End;
 
@@ -180,8 +439,10 @@ namespace Application.Services
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(order =>
-                    order.Customer.FullName.ToLower().Contains(searchTerm) ||
-                    order.Driver.FullName.ToLower().Contains(searchTerm) ||
+                    (order.CustomerName != null && order.CustomerName.ToLower().Contains(searchTerm)) ||
+                    (order.DriverName != null && order.DriverName.ToLower().Contains(searchTerm)) ||
+                    (order.Customer != null && order.Customer.FullName.ToLower().Contains(searchTerm)) ||
+                    (order.Driver != null && order.Driver.FullName.ToLower().Contains(searchTerm)) ||
                     order.Title.ToLower().Contains(searchTerm));
             }
 
@@ -203,19 +464,10 @@ namespace Application.Services
 
                 if (startDate == null && endDate == null)
                 {
-                    if (string.IsNullOrEmpty(searchTerm))
-                    {
-                        return await _dbContext.GetPagedAsync<Order>(page, pageSize, null, ["Driver", "Customer"], true);
-                    }
-
-                    return await _dbContext.GetPagedAsync<Order>(
-                        page,
-                        pageSize,
-                        d => d.Customer.FullName.ToLower().Contains(searchTerm)
-                             || d.Driver.FullName.ToLower().Contains(searchTerm)
-                             || d.Title.ToLower().Contains(searchTerm),
-                        ["Driver", "Customer"],
-                        true);
+                    var activeYear = await _yearCloseService.GetActiveYearAsync();
+                    var yearBounds = OrderDateRanges.Year(activeYear);
+                    startDate = yearBounds.Start;
+                    endDate = yearBounds.End;
                 }
 
                 DateTime start = startDate ?? DateTime.MinValue;
@@ -236,8 +488,10 @@ namespace Application.Services
                     pageSize,
                     d => d.DeliveryTime >= start
                          && d.DeliveryTime <= end
-                         && (d.Customer.FullName.ToLower().Contains(searchTerm)
-                             || d.Driver.FullName.ToLower().Contains(searchTerm)
+                         && ((d.CustomerName != null && d.CustomerName.ToLower().Contains(searchTerm))
+                             || (d.DriverName != null && d.DriverName.ToLower().Contains(searchTerm))
+                             || (d.Customer != null && d.Customer.FullName.ToLower().Contains(searchTerm))
+                             || (d.Driver != null && d.Driver.FullName.ToLower().Contains(searchTerm))
                              || d.Title.ToLower().Contains(searchTerm)),
                     ["Driver", "Customer"],
                     true);
@@ -252,7 +506,9 @@ namespace Application.Services
         {
             try
             {
-                var week = OrderDateRanges.Last7Days();
+                var activeYear = await _yearCloseService.GetActiveYearAsync();
+                var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+                var week = OrderDateRanges.Last7Days(businessDate, activeYear);
                 var query = _dbContext._dbContext.Set<Order>()
                     .Include(order => order.Driver)
                     .Include(order => order.Customer)
@@ -266,14 +522,16 @@ namespace Application.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Error fetching orders: " + ex.Message);
+                throw new Exception("خطأ في جلب الطلبات: " + ex.Message);
             }
         }
         public async Task<PagedList<Order>> GetPDFMonthWeekOrdersAsync()
         {
             try
             {
-                var month = OrderDateRanges.CurrentMonthMtd();
+                var activeYear = await _yearCloseService.GetActiveYearAsync();
+                var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+                var month = OrderDateRanges.CurrentMonthMtd(businessDate, activeYear);
                 var query = _dbContext._dbContext.Set<Order>()
                     .Include(order => order.Driver)
                     .Include(order => order.Customer)
@@ -287,14 +545,16 @@ namespace Application.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Error fetching orders: " + ex.Message);
+                throw new Exception("خطأ في جلب الطلبات: " + ex.Message);
             }
         }
         public async Task<PagedList<Order>> LastMonthOrdersAsync(string searchTerm, int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null)
         {
             searchTerm = searchTerm?.Trim()?.ToLower();
 
-            var month = OrderDateRanges.CurrentMonthMtd();
+            var activeYear = await _yearCloseService.GetActiveYearAsync();
+            var businessDate = await _businessDayService.GetCurrentBusinessDateAsync();
+            var month = OrderDateRanges.CurrentMonthMtd(businessDate, activeYear);
             DateTime start = startDate ?? month.Start;
             DateTime end = endDate ?? month.End;
 
@@ -366,13 +626,28 @@ namespace Application.Services
     DateTime? startDate = null,
     DateTime? endDate = null,
     string SelectedDriver = null,
-    OrderStatus? SelectedStatus = null)
+    OrderStatus? SelectedStatus = null,
+    int? CreatedByUserId = null)
         {
             try
             {
-                // Default to MinValue and MaxValue if dates are null
+                // Default to active business year if dates are null
+                if (startDate == null && endDate == null)
+                {
+                    var activeYear = await _yearCloseService.GetActiveYearAsync();
+                    var bounds = OrderDateRanges.Year(activeYear);
+                    startDate = bounds.Start;
+                    endDate = bounds.End;
+                }
+
                 DateTime start = startDate ?? DateTime.MinValue;
                 DateTime end = endDate ?? DateTime.MaxValue;
+
+                // Date-only end (midnight from query) = inclusive through end of that day.
+                if (end != DateTime.MaxValue && end.TimeOfDay == TimeSpan.Zero)
+                    end = YemenTime.EndOfDay(end);
+                if (start != DateTime.MinValue && start.TimeOfDay == TimeSpan.Zero)
+                    start = YemenTime.StartOfDay(start);
 
                 // Normalize search term
                 searchTerm = searchTerm?.Trim()?.ToLower();
@@ -383,10 +658,17 @@ namespace Application.Services
                 // Apply filters based on provided parameters
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
+                    var idMatch = int.TryParse(searchTerm, out var orderId) ? orderId : (int?)null;
                     predicate = predicate.And(order =>
-                        order.Customer.FullName.ToLower().Contains(searchTerm) ||
-                        order.Driver.FullName.ToLower().Contains(searchTerm) ||
-                        order.Title.ToLower().Contains(searchTerm));
+                        (idMatch.HasValue && order.Id == idMatch.Value) ||
+                        (order.CustomerName != null && order.CustomerName.ToLower().Contains(searchTerm)) ||
+                        (order.DriverName != null && order.DriverName.ToLower().Contains(searchTerm)) ||
+                        (order.Customer != null && order.Customer.FullName.ToLower().Contains(searchTerm)) ||
+                        (order.Customer != null && order.Customer.PhoneNumber1 != null && order.Customer.PhoneNumber1.Contains(searchTerm)) ||
+                        (order.Customer != null && order.Customer.PhoneNumber2 != null && order.Customer.PhoneNumber2.Contains(searchTerm)) ||
+                        (order.Driver != null && order.Driver.FullName.ToLower().Contains(searchTerm)) ||
+                        order.Title.ToLower().Contains(searchTerm) ||
+                        (order.CreatedByUser != null && order.CreatedByUser.FullName.ToLower().Contains(searchTerm)));
                 }
 
                 predicate = predicate.And(order => order.DeliveryTime >= start && order.DeliveryTime <= end);
@@ -401,12 +683,17 @@ namespace Application.Services
                     predicate = predicate.And(order => order.orderStatus == SelectedStatus.Value);
                 }
 
+                if (CreatedByUserId.HasValue && CreatedByUserId.Value > 0)
+                {
+                    predicate = predicate.And(order => order.CreatedByUserId == CreatedByUserId.Value);
+                }
+
                 // Query the database using the predicate and include related entities
                 var pagedOrders = await _dbContext.GetPagedAsync<Order>(
                     page,
                     pageSize,
                     predicate,
-                    new[] { "Driver", "Customer" }, // Include related entities
+                    new[] { "Driver", "Customer", "CreatedByUser" },
                     true
                 );
 
@@ -421,11 +708,33 @@ namespace Application.Services
                         DeliveryTime = order.DeliveryTime,
                         DeliveryFee = order.DeliveryFee,
                         CouponDiscount = order.CouponDiscount,
+                        DiscountType = order.DiscountType,
+                        DiscountValue = order.DiscountValue,
+                        DiscountAmount = order.DiscountAmount,
+                        DriverCommissionRate = order.DriverCommissionRate,
+                        DriverAmount = order.DriverAmount,
+                        CompanyGrossAmount = order.CompanyGrossAmount,
+                        CompanyNetAmount = order.CompanyNetAmount,
                         orderStatus = order.orderStatus,
                         PaymentMethod = order.PaymentMethod,
                         Notice=order.Notice,
+                        DriverName = !string.IsNullOrWhiteSpace(order.DriverName)
+                            ? order.DriverName
+                            : (order.Driver?.FullName ?? string.Empty),
+                        CustomerName = !string.IsNullOrWhiteSpace(order.CustomerName)
+                            ? order.CustomerName
+                            : (order.Customer?.FullName ?? string.Empty),
+                        CustomerId = order.CustomerId,
+                        DriverId = order.DriverId,
+                        CreatedByUserId = order.CreatedByUserId,
+                        CreatedByUser = order.CreatedByUser == null ? null : new User
+                        {
+                            Id = order.CreatedByUser.Id,
+                            FullName = order.CreatedByUser.FullName,
+                            Role = order.CreatedByUser.Role
+                        },
                         
-                        Customer = new Customer
+                        Customer = order.Customer == null ? null : new Customer
                         {
                             Id = order.Customer.Id,
                             FullName = order.Customer.FullName,
@@ -433,13 +742,14 @@ namespace Application.Services
                             PhoneNumber2 = order.Customer.PhoneNumber2,
                             Address=order.Customer.Address
                         },
-                        Driver = new Driver
+                        Driver = order.Driver == null ? null : new Driver
                         {
                             Id = order.Driver.Id,
                             FullName = order.Driver.FullName,
                             PhoneNumber1 = order.Driver.PhoneNumber1,
                             PhoneNumber2 = order.Driver.PhoneNumber2,
-                            Address=order.Driver.Address
+                            Address=order.Driver.Address,
+                            CommissionRate = order.Driver.CommissionRate
                         }
                     }).ToList(),
                     page,
@@ -450,7 +760,7 @@ namespace Application.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("jh");
+                throw new Exception("خطأ في جلب الطلبات: " + ex.Message);
             }
         }
 
@@ -465,12 +775,28 @@ namespace Application.Services
         DateTime? startDate = null,
         DateTime? endDate = null,
         int? SelectedDriver = null,
-        OrderStatus? SelectedStatus = null)
+        OrderStatus? SelectedStatus = null,
+        int? CreatedByUserId = null)
         {
             try
             {
+                if (startDate == null && endDate == null)
+                {
+                    var activeYear = await _yearCloseService.GetActiveYearAsync();
+                    var bounds = OrderDateRanges.Year(activeYear);
+                    startDate = bounds.Start;
+                    endDate = bounds.End;
+                }
+
                 DateTime start = startDate ?? DateTime.MinValue;
                 DateTime end = endDate ?? DateTime.MaxValue;
+
+                // Date-only end (midnight from picker) = inclusive through end of that day.
+                if (end != DateTime.MaxValue && end.TimeOfDay == TimeSpan.Zero)
+                    end = YemenTime.EndOfDay(end);
+                if (start != DateTime.MinValue && start.TimeOfDay == TimeSpan.Zero)
+                    start = YemenTime.StartOfDay(start);
+
                 searchTerm = searchTerm?.Trim()?.ToLower();
 
                 // Prefer explicit SelectedDriver; fall back to driverId
@@ -498,15 +824,21 @@ namespace Application.Services
                     predicate = predicate.And(order => order.orderStatus == SelectedStatus.Value);
                 }
 
+                if (CreatedByUserId.HasValue && CreatedByUserId.Value > 0)
+                {
+                    predicate = predicate.And(order => order.CreatedByUserId == CreatedByUserId.Value);
+                }
+
                 var pagedOrders = await _dbContext.GetPagedAsync<Order>(
                     page,
                     pageSize,
                     predicate,
-                    new[] { "Driver", "Customer" },
+                    new[] { "Driver", "Customer", "CreatedByUser" },
                     true
                 );
 
                 var query = _dbContext._dbContext.Set<Order>()
+                    .Include(order => order.Driver)
                     .Where(order =>
                         order.orderStatus == OrderStatus.Delivered &&
                         order.DeliveryTime >= start &&
@@ -518,10 +850,25 @@ namespace Application.Services
                     query = query.Where(order => order.DriverId == effectiveDriverId.Value);
                 }
 
+                if (CreatedByUserId.HasValue && CreatedByUserId.Value > 0)
+                {
+                    query = query.Where(order => order.CreatedByUserId == CreatedByUserId.Value);
+                }
+
                 decimal totalRevenue = await query.SumAsync(order => order.FinalPrice);
-                decimal driverProfit = RevenueSplit.DriverProfit(totalRevenue);
-                decimal companyProfit = RevenueSplit.CompanyProfit(totalRevenue);
-                decimal expenses = RevenueSplit.Expenses(totalRevenue);
+                decimal driverProfit = await query.SumAsync(order =>
+                    order.DriverAmount > 0
+                        ? order.DriverAmount
+                        : order.FinalPrice * (
+                            order.Driver != null && order.Driver.CommissionRate > 0
+                                ? order.Driver.CommissionRate
+                                : RevenueSplit.DefaultDriverCommissionRate));
+
+                var fundEntities = await _companyFundService.GetActiveEntitiesAsync();
+                var breakdown = RevenueSplit.Calculate(totalRevenue, driverProfit, fundEntities);
+                var companyProfit = breakdown.Funds.Count > 0
+                    ? breakdown.CompanyAllocatedTotal
+                    : breakdown.RemainingAfterDrivers;
 
                 var pagedOrderDTOs = new PagedList<Order>(
                    pagedOrders.TotalCount,
@@ -534,15 +881,30 @@ namespace Application.Services
                        orderStatus = order.orderStatus,
                        PaymentMethod = order.PaymentMethod,
                        Notice = order.Notice,
-                       Customer = new Customer
+                       DriverName = !string.IsNullOrWhiteSpace(order.DriverName)
+                           ? order.DriverName
+                           : (order.Driver?.FullName ?? string.Empty),
+                       CustomerName = !string.IsNullOrWhiteSpace(order.CustomerName)
+                           ? order.CustomerName
+                           : (order.Customer?.FullName ?? string.Empty),
+                       CustomerId = order.CustomerId,
+                       DriverId = order.DriverId,
+                       CreatedByUserId = order.CreatedByUserId,
+                       CreatedByUser = order.CreatedByUser == null ? null : new User
+                       {
+                           Id = order.CreatedByUser.Id,
+                           FullName = order.CreatedByUser.FullName
+                       },
+                       Customer = order.Customer == null ? null : new Customer
                        {
                            Id = order.Customer.Id,
                            FullName = order.Customer.FullName,
                        },
-                       Driver = new Driver
+                       Driver = order.Driver == null ? null : new Driver
                        {
                            Id = order.Driver.Id,
                            FullName = order.Driver.FullName,
+                           CommissionRate = order.Driver.CommissionRate
                        }
                    }).ToList(),
                    page,
@@ -552,16 +914,66 @@ namespace Application.Services
                 return new DriverReportResult
                 {
                     Orders = pagedOrderDTOs,
-                    DriverProfit = driverProfit,
+                    DriverProfit = breakdown.DriverProfit,
                     CompanyProfit = companyProfit,
-                    CompanyRevenue = totalRevenue,
-                    expinses = expenses,
+                    CompanyRevenue = breakdown.TotalRevenue,
+                    RemainingAfterDrivers = breakdown.RemainingAfterDrivers,
+                    Funds = breakdown.Funds,
+                    expinses = breakdown.Expenses,
+                    ManagersAmount = breakdown.ManagersAmount,
+                    ManagementAmount = breakdown.ManagementAmount,
+                    CompanyReserveAmount = breakdown.CompanyReserveAmount,
                 };
             }
             catch (Exception ex)
             {
-                throw new Exception("An error occurred while fetching driver reports.", ex);
+                throw new Exception("حدث خطأ أثناء جلب تقارير الموصلين.", ex);
             }
+        }
+
+        public async Task<IReadOnlyList<string>> GetDeliveryLocationSuggestionsAsync(string? search = null, int limit = 15)
+        {
+            limit = Math.Clamp(limit, 1, 30);
+            var term = search?.Trim();
+
+            var orders = _dbContext._dbContext.Set<Order>().AsNoTracking();
+            var customers = _dbContext._dbContext.Set<Customer>().AsNoTracking();
+
+            var query = from o in orders
+                        join c in customers on o.CustomerId equals c.Id
+                        where c.Address != null && c.Address.Trim() != ""
+                        select c.Address;
+
+            if (!string.IsNullOrWhiteSpace(term))
+                query = query.Where(a => a.Contains(term));
+
+            return await query
+                .GroupBy(a => a.Trim())
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .Select(g => g.Key)
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<string>> GetOrderNoticeSuggestionsAsync(string? search = null, int limit = 15)
+        {
+            limit = Math.Clamp(limit, 1, 30);
+            var term = search?.Trim();
+
+            var query = _dbContext._dbContext.Set<Order>().AsNoTracking()
+                .Where(o => o.Notice != null && o.Notice.Trim() != "");
+
+            if (!string.IsNullOrWhiteSpace(term))
+                query = query.Where(o => o.Notice.Contains(term));
+
+            return await query
+                .GroupBy(o => o.Notice.Trim())
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .Select(g => g.Key)
+                .Take(limit)
+                .ToListAsync();
         }
 
 

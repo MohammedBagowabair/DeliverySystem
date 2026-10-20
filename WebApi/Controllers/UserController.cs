@@ -17,7 +17,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+    [Authorize(Roles = AppPermissions.Operations)]
     public class UserController : ControllerBase
     {
         private readonly IUserService _service;
@@ -28,8 +28,28 @@ namespace WebApi.Controllers
             _mapper = mapper;
         }
 
+        [HttpGet("StaffList")]
+        [Authorize(Roles = AppPermissions.Operations)]
+        public async Task<ApiResultModel<IEnumerable<UserListItemDTO>>> GetStaffListAsync()
+        {
+            try
+            {
+                var users = await _service.GetAll();
+                var result = _mapper.Map<IEnumerable<UserListItemDTO>>(users);
+                return new ApiResultModel<IEnumerable<UserListItemDTO>>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<IEnumerable<UserListItemDTO>>(ex.Code, ex.Message, []);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResultModel<IEnumerable<UserListItemDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, []);
+            }
+        }
+
         [HttpGet("GetAll")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<IEnumerable<UpdateUserDTO>>> GetAllAsync()
         {
             try
@@ -43,14 +63,14 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<IEnumerable<UpdateUserDTO>>(500, ex.Message, []);
+                return new ApiResultModel<IEnumerable<UpdateUserDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, []);
             }
 
         }
 
 
         [HttpGet("SearchUsers")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<PagedList<UserDTO>>> SearchUsersAsync(string searchTerm, int page = 1, int pageSize = 10)
         {
             try
@@ -65,12 +85,12 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<PagedList<UserDTO>>(500, ex.Message, null);
+                return new ApiResultModel<PagedList<UserDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
         }
 
         [HttpPost("CreateUserAsync")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<createUserDTO>> CreateUserAsync(createUserDTO createUserDTO)
         {
             try
@@ -92,7 +112,7 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<createUserDTO>(500, ex.Message, null);
+                return new ApiResultModel<createUserDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
 
         }
@@ -115,7 +135,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ResponseModel(500, ex.Message));
+                return StatusCode(500, new ResponseModel(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE));
             }
         }
 
@@ -142,18 +162,20 @@ namespace WebApi.Controllers
         //    catch (Exception ex)
         //    {
         //        //_logger.LogWarning(ex, "")
-        //        return new ApiResultModel<UserLoginDto>(500, ex.Message, null);
+        //        return new ApiResultModel<UserLoginDto>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
         //    }
         //}
 
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<UserDTO>> GetAsync(int id)
         {
             try
             {
                 var result = _mapper.Map<UserDTO>(await _service.GetById(id));
+                if (result is null)
+                    return new ApiResultModel<UserDTO>(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE, "السجل غير موجود", null);
                 return new ApiResultModel<UserDTO>(result);
             }
             catch (DeliveryCoreException ex)
@@ -164,13 +186,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<UserDTO>(500, ex.Message, null);
+                return new ApiResultModel<UserDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
 
         }
 
         [HttpDelete]
-        [Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -186,14 +208,14 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
 
         }
 
 
         [HttpPut]
-        [Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<bool>> UpdateAsync(UpdateUserDTO updateUserDTO)
         {
             try
@@ -209,34 +231,106 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
 
         }
 
+        [HttpGet("permissions/catalog")]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
+        public ApiResultModel<PermissionCatalogDTO> GetPermissionCatalog()
+        {
+            try
+            {
+                return new ApiResultModel<PermissionCatalogDTO>(_service.GetPermissionCatalog());
+            }
+            catch (Exception)
+            {
+                return new ApiResultModel<PermissionCatalogDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
+            }
+        }
 
-        //[HttpPost("Login")]
-        //public async Task<ApiResultModel<JwtTokenModel>>Login(LoginDto loginDTO)
-        //{
-        //    try
-        //    {
-        //        var userLogin = await _service.Login(loginDTO);
-        //        return new ApiResultModel<JwtTokenModel>(userLogin);    
-        //    }
-        //    catch (DeliveryCoreException ex)
-        //    {
-        //        //  _logger.LogWarning(ex, "");
-        //        return new ApiResultModel<JwtTokenModel>(ex.Code, ex.Message, null);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        //_logger.LogWarning(ex, "")
-        //        return new ApiResultModel<JwtTokenModel>(500, ex.Message, null);
-        //    }
-        //}
+        [HttpPut("{id:int}/permissions")]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
+        public async Task<ApiResultModel<UpdateUserPermissionsResultDTO>> UpdatePermissionsAsync(int id, [FromBody] UpdateUserPermissionsDTO dto)
+        {
+            try
+            {
+                var result = await _service.UpdatePermissionsAsync(id, dto ?? new UpdateUserPermissionsDTO());
+                return new ApiResultModel<UpdateUserPermissionsResultDTO>(result);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<UpdateUserPermissionsResultDTO>(ex.Code, ex.Message, null);
+            }
+            catch (Exception)
+            {
+                return new ApiResultModel<UpdateUserPermissionsResultDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
+            }
+        }
 
 
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<ApiResultModel<bool>> ChangePasswordAsync([FromBody] ChangePasswordDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return new ApiResultModel<bool>(ErrorCodes.USER_PASSWORD_IS_NULL_CODE, "بيانات كلمة المرور غير صالحة", false);
 
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (!int.TryParse(userIdClaim, out var userId))
+                    return new ApiResultModel<bool>(ErrorCodes.USER_IS_NOT_AUTHORIZED_CODE, "غير مصرح", false);
 
+                await _service.ChangePasswordAsync(userId, dto);
+                return new ApiResultModel<bool>(true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception)
+            {
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
+            }
+        }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<ApiResultModel<bool>> ForgotPasswordAsync([FromBody] ForgotPasswordDto dto)
+        {
+            try
+            {
+                await _service.ForgotPasswordAsync(dto ?? new ForgotPasswordDto());
+                return new ApiResultModel<bool>(0, "إذا كان البريد مسجلاً لدينا، ستصلك تعليمات إعادة التعيين.", true);
+            }
+            catch (Exception)
+            {
+                return new ApiResultModel<bool>(0, "إذا كان البريد مسجلاً لدينا، ستصلك تعليمات إعادة التعيين.", true);
+            }
+        }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<ApiResultModel<bool>> ResetPasswordAsync([FromBody] ResetPasswordDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return new ApiResultModel<bool>(ErrorCodes.USER_PASSWORD_IS_NULL_CODE, "بيانات إعادة التعيين غير صالحة", false);
+
+                await _service.ResetPasswordAsync(dto);
+                return new ApiResultModel<bool>(0, "تم تحديث كلمة المرور بنجاح", true);
+            }
+            catch (DeliveryCoreException ex)
+            {
+                return new ApiResultModel<bool>(ex.Code, ex.Message, false);
+            }
+            catch (Exception)
+            {
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
+            }
+        }
     }
 }

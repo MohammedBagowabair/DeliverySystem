@@ -20,7 +20,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+    [Authorize(Roles = AppPermissions.DriversAccess)]
     public class DriverController : ControllerBase
     {
         private readonly IDriverService _service;
@@ -35,7 +35,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.DriversAccess)]
         public async Task<ApiResultModel<IEnumerable<DriverDTO>>> GetAllAsync()
         {
             try
@@ -51,13 +51,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<IEnumerable<DriverDTO>>(500, ex.Message, []);
+                return new ApiResultModel<IEnumerable<DriverDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, []);
             }
 
         }
 
         [HttpGet]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.DriversAccess)]
         public async Task<ApiResultModel<DriverDTO>> GetAsync(int id)
         {
             try
@@ -66,6 +66,8 @@ namespace WebApi.Controllers
                 var result = await _mediator.Send(getDriverByIdQuery);
 
                 var resulDtot = _mapper.Map<DriverDTO>(result);
+                if (resulDtot is null)
+                    return new ApiResultModel<DriverDTO>(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE, "السجل غير موجود", null);
                 return new ApiResultModel<DriverDTO>(resulDtot);
             }
             catch (DeliveryCoreException ex)
@@ -74,14 +76,14 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<DriverDTO>(500, ex.Message, null);
+                return new ApiResultModel<DriverDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
 
             }
 
         }
 
         [HttpPost]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.DriversAccess)]
         public async Task<ApiResultModel<CreateUpdateDriverDTO>> AddAsync(CreateUpdateDriverDTO createDriverDTO)
         {
             try
@@ -100,13 +102,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<CreateUpdateDriverDTO>(500, ex.Message, null);
+                return new ApiResultModel<CreateUpdateDriverDTO>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
 
         }
 
         [HttpDelete]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.DriversAccess)]
         public async Task<ApiResultModel<bool>> DeleteAsync(int id)
         {
             try
@@ -123,13 +125,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
 
         }
 
         [HttpPut]
-        [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+        [Authorize(Roles = AppPermissions.DriversAccess)]
         public async Task<ApiResultModel<bool>> UpdateAsync(CreateUpdateDriverDTO createUpdateDriverDTO)
         {
             try
@@ -147,7 +149,7 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<bool>(500, ex.Message, false);
+                return new ApiResultModel<bool>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, false);
             }
 
         }
@@ -173,7 +175,7 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 //_logger.LogWarning(ex, "")
-                return new ApiResultModel<PagedList<Driver>>(500, ex.Message, null);
+                return new ApiResultModel<PagedList<Driver>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
 
         }
@@ -195,7 +197,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<PagedList<DriverDTO>>(500, ex.Message, null);
+                return new ApiResultModel<PagedList<DriverDTO>>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, null);
             }
         }
 

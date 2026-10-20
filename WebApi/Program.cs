@@ -9,29 +9,40 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
-
-
-
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 
-// Add services to the container.
-builder.Services.AddCors();//importent
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AppCors", policy =>
+    {
+        if (builder.Environment.IsDevelopment() || corsOrigins.Length == 0)
+        {
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(corsOrigins).AllowAnyMethod().AllowAnyHeader();
+        }
+    });
+});
+
 builder.Services.AddControllers();
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
 builder.Services.AddApplicationServices();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Culture API",
+        Title = "DeliverySystem API",
         Version = "v1",
-        Description = "These APIs are used to serve the operations of the Dilevery Web App & Culture Mobile App."
+        Description = "Delivery System Web API"
     });
 
-    // Add JWT Authentication to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -56,13 +67,15 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
-
-    // Enable XML Comments for Swagger (make sure the XML documentation file is generated)
-
-    //var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    //var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    //options.IncludeXmlComments(xmlPath);
 });
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    if (builder.Environment.IsProduction())
+        throw new InvalidOperationException("Jwt:Key must be configured via environment/secrets in Production.");
+    jwtKey = "dev-only-insecure-key-change-me-32chars!!";
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -75,7 +88,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero,
         };
     });
@@ -87,55 +100,72 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
+builder.Services.AddScoped<ICompanyFundService, CompanyFundService>();
+builder.Services.AddScoped<IDayCloseService, DayCloseService>();
+builder.Services.AddScoped<IBusinessDayService, BusinessDayService>();
+builder.Services.AddScoped<IYearCloseService, YearCloseService>();
 builder.Services.AddScoped<WeeklyDateRange>();
-
-//builder.Services.AddMediatR(configuration =>
-//{
-//    configuration.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly());
-//});
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).EnableSensitiveDataLogging().EnableDetailedErrors());
-builder.Services.AddEntityFrameworkMySql().AddDbContext<ApplicationDbContext>();
+var sqlConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration.GetConnectionString("MySqlConnectionStrings");
+if (string.IsNullOrWhiteSpace(sqlConnectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection is missing. Set it in appsettings.json / appsettings.Production.json.");
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(sqlConnectionString, sql => sql.EnableRetryOnFailure()));
 
 var app = builder.Build();
 
-//Auto Migration
-//using var scope = app.Services.CreateScope();
-//var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//db.Database.Migrate();
+app.UseMiddleware<WebApi.Middleware.GlobalExceptionMiddleware>();
+app.UseCors("AppCors");
 
-app.UseCors(policyBuilder =>
-{
-    policyBuilder.AllowAnyOrigin()
-                 .AllowAnyMethod()
-                 .AllowAnyHeader();
-});
-
-app.UseCors("AllowAllOrigins");
 using var scope = app.Services.CreateScope();
-
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-db.Database.Migrate();
+try
+{
+    db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
+    logger?.LogError(ex,
+        "Database startup failed. Check ConnectionStrings:DefaultConnection (SQL Server) in appsettings.");
+    Console.Error.WriteLine("DATABASE STARTUP FAILED: " + ex);
+    throw;
+}
+
+if (app.Configuration.GetValue("Database:AllowReset", false)
+    && app.Configuration.GetValue("Database:ResetOnStartup", false))
+{
+    var resetLogger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("DatabaseReset");
+    await Infrastructure.Seed.DatabaseResetSeeder.ResetToAdminOnlyAsync(db, resetLogger);
+}
+
 await Infrastructure.Seed.UserSeeder.SeedAsync(app.Services);
-//Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
+await Infrastructure.Seed.CompanySettingsSeeder.SeedAsync(app.Services);
+await Infrastructure.Seed.CompanyFundSeeder.SeedAsync(app.Services);
+
+// Swagger available in Production too (MonsterASP / ops debugging)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "DeliverySystem API v1");
+    c.RoutePrefix = "swagger";
 });
-//}
 
-
-app.UseHttpsRedirection();
+// Avoid redirect loops behind MonsterASP HTTPS termination
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapControllers();
-
 app.Run();

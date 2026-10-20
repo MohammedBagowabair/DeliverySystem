@@ -1,4 +1,4 @@
-﻿using Application.Common.Models;
+using Application.Common.Models;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Constants;
@@ -10,7 +10,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = Roles.Staff + "," + Roles.Admin)]
+    [Authorize(Roles = AppPermissions.Operations)]
     public class DashboardController : ControllerBase
     {
 
@@ -28,6 +28,7 @@ namespace WebApi.Controllers
 
         // Driver Revenue
         [HttpGet("DriversProfit")]
+        [Authorize(Roles = AppPermissions.ViewFinanceAccess)]
         public async Task<ApiResultModel<decimal>> GetDriverProfit(int? driverId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
@@ -41,12 +42,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<decimal>(500, ex.Message, 0);
+                return new ApiResultModel<decimal>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
         // Profit
 
         [HttpGet("GetProfit")]
+        [Authorize(Roles = AppPermissions.ViewFinanceAccess)]
         public async Task<ApiResultModel<decimal>> GetProfit([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
@@ -60,12 +62,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<decimal>(500, ex.Message, 0);
+                return new ApiResultModel<decimal>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
 
         // Overall Revenue
         [HttpGet("GetRevenue")]
+        [Authorize(Roles = AppPermissions.ViewFinanceAccess)]
         public async Task<ApiResultModel<decimal>> GetRevenue([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             try
@@ -79,12 +82,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<decimal>(500, ex.Message, 0);
+                return new ApiResultModel<decimal>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
 
         // TotalUsers
-        [HttpGet("TotalUsers")]
+        [HttpGet("TotalUsers")]
+        [Authorize(Roles = AppPermissions.AdminOnly)]
         public async Task<ApiResultModel<int>> GetTotalUsers()
         {
 
@@ -99,7 +103,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
 
         }
@@ -119,7 +123,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
 
         }
@@ -138,7 +142,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
 
         }
@@ -159,7 +163,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
         // TotalCustomers
@@ -177,7 +181,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
 
@@ -196,7 +200,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
 
@@ -215,7 +219,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
         // Processing Orders
@@ -233,7 +237,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
         // CancelledOrders Orders
@@ -251,7 +255,7 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                return new ApiResultModel<int>(500, ex.Message, 0);
+                return new ApiResultModel<int>(ErrorCodes.SYS_UNKNOWN_ERROR_CODE, ErrorCodes.SYS_UNKNOWN_ERROR_MESSAGE, 0);
             }
         }
 

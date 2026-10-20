@@ -7,17 +7,17 @@ namespace Application.Interfaces
 {
     public interface IUserService
     {
-        // Legacy LoginDto removed; use Authenticate(UserLoginDto)
         Task<PagedList<User>> SearchUsersAsync(string searchTerm, int page, int pageSize);
         Task<User> Create(createUserDTO createUserDTO);
         Task<User> GetById(int id);
         Task<bool> Delete(int id);
         Task Update(UpdateUserDTO updateUserDTO);
         Task<IEnumerable<User>> GetAll();
-        public Task<JwtTokenModel> Authenticate(UserLoginDto user);
-
-
-
-
+        Task<JwtTokenModel> Authenticate(UserLoginDto user);
+        Task ChangePasswordAsync(int userId, ChangePasswordDto dto);
+        Task ForgotPasswordAsync(ForgotPasswordDto dto);
+        Task ResetPasswordAsync(ResetPasswordDto dto);
+        PermissionCatalogDTO GetPermissionCatalog();
+        Task<UpdateUserPermissionsResultDTO> UpdatePermissionsAsync(int userId, UpdateUserPermissionsDTO dto);
     }
 }

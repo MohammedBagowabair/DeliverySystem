@@ -8,7 +8,7 @@ namespace Infrastructure.Configurations.Validators
     {
         public void Configure(EntityTypeBuilder<Customer> builder)
         {
-            // Relationship configured on Order (Restrict delete)
+            builder.HasIndex(x => x.PhoneNumber1);
         }
     }
 }

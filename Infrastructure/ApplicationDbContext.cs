@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
 using Domain.Common.Models;
 using Domain.Entities;
+using Domain.Exceptions;
 using Infrastructure.Configurations.Validators;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,15 +27,24 @@ namespace Infrastructure
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<CompanySettings> CompanySettings { get; set; }
+        public DbSet<CompanyFund> CompanyFunds { get; set; }
+        public DbSet<CompanyFundChangeLog> CompanyFundChangeLogs { get; set; }
+        public DbSet<ClosedBusinessDay> ClosedBusinessDays { get; set; }
+        public DbSet<ClosedBusinessYear> ClosedBusinessYears { get; set; }
+        public DbSet<BusinessDayState> BusinessDayStates { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var connectionString = _configuration.GetConnectionString("MySqlConnectionStrings");
-            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+            if (optionsBuilder.IsConfigured || _configuration is null)
+                return;
 
-            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mySqlOptionsAction =>
-            {
-                mySqlOptionsAction.EnableRetryOnFailure();
-            });
+            var connectionString = _configuration.GetConnectionString("DefaultConnection")
+                ?? _configuration.GetConnectionString("MySqlConnectionStrings");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                return;
+
+            optionsBuilder.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
         }
         public async Task<T> AddAsync<T>(T entity) where T : BaseEntity
         {
@@ -44,7 +54,8 @@ namespace Infrastructure
         }
         public async Task<bool> DeleteAsync<T>(int id) where T : BaseEntity
         {
-            var entity = await Set<T>().FindAsync(id) ?? throw new Exception("Record Not Found");
+            var entity = await Set<T>().FindAsync(id)
+                ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
             Set<T>().Remove(entity);
 
             await SaveChangesAsync();
@@ -121,6 +132,13 @@ namespace Infrastructure
             new DriverValidator().Configure(modelBuilder.Entity<Driver>());
             new OrderValidator().Configure(modelBuilder.Entity<Order>());
             new UserValidator().Configure(modelBuilder.Entity<User>());
+            new CompanySettingsValidator().Configure(modelBuilder.Entity<CompanySettings>());
+            new CompanyFundValidator().Configure(modelBuilder.Entity<CompanyFund>());
+            new CompanyFundChangeLogValidator().Configure(modelBuilder.Entity<CompanyFundChangeLog>());
+            new ClosedBusinessDayValidator().Configure(modelBuilder.Entity<ClosedBusinessDay>());
+            new ClosedBusinessYearValidator().Configure(modelBuilder.Entity<ClosedBusinessYear>());
+            new BusinessDayStateValidator().Configure(modelBuilder.Entity<BusinessDayState>());
+            new PasswordResetTokenValidator().Configure(modelBuilder.Entity<PasswordResetToken>());
             base.OnModelCreating(modelBuilder);
         }
 

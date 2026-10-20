@@ -1,14 +1,10 @@
 ﻿using Application.DTO;
 using AutoMapper;
 using Domain.Entities;
-using Domain.Common.Models; // Add this namespace
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Domain.Common.Models;
+using Domain.Constants;
 using Application.DTO.OrderDtos;
+using Application.DTO.CompanySettingsDtos;
 using Application.DTO.CustomerDtos;
 using Application.DTO.DriverDtos;
 using Application.DTO.UserDtos;
@@ -21,7 +17,6 @@ namespace Application.Mappings
         {
             CreateMap<BaseEntity, BaseEntityDTO>().ReverseMap();
             CreateMap<Person, PersonDTO>().ReverseMap();
-            CreateMap<User, UserDTO>().ReverseMap();
 
             CreateMap<Driver, DriverDTO>().ReverseMap();
             CreateMap<Customer, CustomerDTO>().ReverseMap();
@@ -29,25 +24,55 @@ namespace Application.Mappings
             CreateMap<Customer, CreateUpdateCustomerDTO>().ReverseMap();
             CreateMap<Driver, CreateUpdateDriverDTO>().ReverseMap();
 
-            CreateMap<Order, OrderDTO>().ReverseMap();
+            CreateMap<Order, OrderDTO>()
+                .ForMember(d => d.CreatedByUserName, o => o.MapFrom(s => s.CreatedByUser != null ? s.CreatedByUser.FullName : null))
+                .ForMember(d => d.DriverName, o => o.MapFrom(s =>
+                    !string.IsNullOrWhiteSpace(s.DriverName) ? s.DriverName : (s.Driver != null ? s.Driver.FullName : string.Empty)))
+                .ForMember(d => d.CustomerName, o => o.MapFrom(s =>
+                    !string.IsNullOrWhiteSpace(s.CustomerName) ? s.CustomerName : (s.Customer != null ? s.Customer.FullName : string.Empty)))
+                .ReverseMap()
+                .ForMember(d => d.CreatedByUser, o => o.Ignore())
+                .ForMember(d => d.Driver, o => o.Ignore())
+                .ForMember(d => d.Customer, o => o.Ignore());
             CreateMap<Order, CreateOrderDTO>().ReverseMap();
             CreateMap<Order, UpdateOrderDTO>().ReverseMap();
             CreateMap<Order, CreateUpdateOrderDTO>().ReverseMap();
+            CreateMap<User, UserListItemDTO>()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s =>
+                    string.Equals(s.Role, Roles.Admin, StringComparison.OrdinalIgnoreCase)
+                        ? StaffPermissions.All.ToList()
+                        : StaffPermissions.Parse(s.Permissions)));
             CreateMap<Customer, CustomerOrderPagedDTO>().ReverseMap();
             CreateMap<Driver, DriverPagedDTO>().ReverseMap();
-            CreateMap<User, UserDTO>().ReverseMap();
-            CreateMap<User, createUserDTO>().ReverseMap();
-            CreateMap<User, UpdateUserDTO>().ReverseMap();
 
+            CreateMap<User, UserDTO>()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.Parse(s.Permissions)))
+                .ReverseMap()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.Serialize(s.Permissions)));
 
+            CreateMap<User, createUserDTO>()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.Parse(s.Permissions)))
+                .ForMember(d => d.Password, o => o.Ignore())
+                .ForMember(d => d.ConfirmPassword, o => o.Ignore())
+                .ReverseMap()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.NormalizeForRole(s.Role, s.Permissions)))
+                .ForMember(d => d.PasswordHash, o => o.Ignore())
+                .ForMember(d => d.PasswordSalt, o => o.Ignore());
 
-            // Add generic mapping for PagedList
+            CreateMap<User, UpdateUserDTO>()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.Parse(s.Permissions)))
+                .ReverseMap()
+                .ForMember(d => d.Permissions, o => o.MapFrom(s => StaffPermissions.NormalizeForRole(s.Role, s.Permissions)))
+                .ForMember(d => d.PasswordHash, o => o.Ignore())
+                .ForMember(d => d.PasswordSalt, o => o.Ignore());
+
+            CreateMap<CompanySettings, CompanySettingsDTO>().ReverseMap();
+
             CreateMap(typeof(PagedList<>), typeof(PagedList<>))
                 .ConvertUsing(typeof(PagedListConverter<,>));
         }
     }
 
-    // Custom converter for PagedList
     public class PagedListConverter<TSource, TDestination>
         : ITypeConverter<PagedList<TSource>, PagedList<TDestination>>
     {

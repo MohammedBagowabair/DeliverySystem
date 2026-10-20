@@ -20,7 +20,7 @@ namespace Application.Handlers.Order.CommandHandler
         public async Task Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
         {
 
-             await _orderService.Update(request.Order);
+             await _orderService.Update(request.Order, request.AllowClosedDayEdit);
         }
     }
 }

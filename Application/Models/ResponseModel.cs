@@ -22,14 +22,14 @@ namespace Application.Models
             this.Message = message;
         }
 
-        public ResponseModel(Object content) : this(0, "Success")
+        public ResponseModel(Object content) : this(0, "نجاح")
         {
             this.Content = content;
         }
 
         public ResponseModel(DeliveryCoreException e) : this(e.Code, e.Message)
         {
-            this.Content = e.StackTrace;
+            this.Content = e.Data;
         }
 
         public ResponseModel()

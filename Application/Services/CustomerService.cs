@@ -41,12 +41,20 @@ namespace Application.Services
             var hasOrders = await _dbContext._dbContext.Set<Order>().AnyAsync(o => o.CustomerId == id);
             if (hasOrders)
             {
-                throw new DeliveryCoreException(
-                    "Cannot delete customer while related orders exist.",
-                    ErrorCodes.NOT_ALL_RECORDS_DELETED_CODE,
-                    null);
+                var customer = await _dbContext._dbContext.Set<Customer>().FirstOrDefaultAsync(c => c.Id == id)
+                    ?? throw new DeliveryCoreException(ErrorCodes.DATABASE_RECORD_NOT_FOUND_CODE);
+
+                if (customer.IsActive)
+                {
+                    customer.IsActive = false;
+                    await _dbContext._dbContext.SaveChangesAsync();
+                }
+
+                // Soft-deactivate preserves order history (CustomerName denormalized on orders).
+                return true;
             }
-           return await _dbContext.DeleteAsync<Customer>(id);
+
+            return await _dbContext.DeleteAsync<Customer>(id);
         }
 
         public async Task<int> CountAsync()

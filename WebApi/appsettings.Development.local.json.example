@@ -1,0 +1,5 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=db69814.databaseasp.net;Database=db69814;User Id=db69814;Password=YOUR_PASSWORD;Encrypt=False;MultipleActiveResultSets=True"
+  }
+}

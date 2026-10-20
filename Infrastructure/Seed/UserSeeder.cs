@@ -2,13 +2,14 @@ using Application.Helpers;
 using Domain.Constants;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Seed
 {
     /// <summary>
-    /// Ensures the two system users exist: Admin and Staff.
+    /// Ensures configured seed users exist. Never overwrites existing passwords.
     /// </summary>
     public static class UserSeeder
     {
@@ -21,21 +22,70 @@ namespace Infrastructure.Seed
         {
             using var scope = services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
             var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("UserSeeder");
+            var env = scope.ServiceProvider.GetService<Microsoft.Extensions.Hosting.IHostEnvironment>();
 
-            await EnsureUserAsync(db, logger,
-                email: AdminEmail,
-                fullName: "Admin",
-                role: Roles.Admin,
-                password: DefaultAdminPassword,
-                phone: "700000001");
+            var seedUsers = config.GetSection("SeedUsers").Get<List<SeedUserOptions>>() ?? new List<SeedUserOptions>();
 
-            await EnsureUserAsync(db, logger,
-                email: StaffEmail,
-                fullName: "Staff",
-                role: Roles.Staff,
-                password: DefaultStaffPassword,
-                phone: "700000002");
+            if (seedUsers.Count == 0)
+            {
+                if (string.Equals(env?.EnvironmentName, "Production", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger?.LogWarning("SeedUsers is empty in Production — skipping default password seed.");
+                    return;
+                }
+
+                seedUsers =
+                [
+                    new SeedUserOptions
+                    {
+                        Email = AdminEmail,
+                        FullName = "Admin",
+                        Role = Roles.Admin,
+                        Password = DefaultAdminPassword,
+                        Phone = "700000001"
+                    },
+                    new SeedUserOptions
+                    {
+                        Email = StaffEmail,
+                        FullName = "Staff",
+                        Role = Roles.Staff,
+                        Password = DefaultStaffPassword,
+                        Phone = "700000002"
+                    },
+                    new SeedUserOptions
+                    {
+                        Email = "staff2@delivery.local",
+                        FullName = "Staff 2",
+                        Role = Roles.Staff,
+                        Password = DefaultStaffPassword,
+                        Phone = "700000003"
+                    }
+                ];
+            }
+
+            foreach (var u in seedUsers)
+            {
+                if (string.IsNullOrWhiteSpace(u.Email) || string.IsNullOrWhiteSpace(u.Password))
+                {
+                    logger?.LogWarning("Skipping seed user with missing email/password: {Email}", u.Email);
+                    continue;
+                }
+
+                var role = string.IsNullOrWhiteSpace(u.Role) ? Roles.Staff : u.Role.Trim();
+                if (role != Roles.Admin && role != Roles.Staff)
+                    role = Roles.Staff;
+
+                await EnsureUserAsync(
+                    db,
+                    logger,
+                    email: u.Email.Trim(),
+                    fullName: string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName.Trim(),
+                    role: role,
+                    password: u.Password,
+                    phone: u.Phone ?? string.Empty);
+            }
         }
 
         private static async Task EnsureUserAsync(
@@ -49,9 +99,7 @@ namespace Infrastructure.Seed
         {
             var exists = await db.Users.AnyAsync(u => u.Email == email);
             if (exists)
-            {
                 return;
-            }
 
             IdentityHelpers.GetPasswordHashAndSalt(password, out var hash, out var salt);
             db.Users.Add(new User
@@ -59,6 +107,7 @@ namespace Infrastructure.Seed
                 FullName = fullName,
                 Email = email,
                 Role = role,
+                Permissions = StaffPermissions.NormalizeForRole(role, null),
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 PhoneNumber1 = phone,
@@ -68,6 +117,15 @@ namespace Infrastructure.Seed
             });
             await db.SaveChangesAsync();
             logger?.LogInformation("Seeded user {Email} with role {Role}", email, role);
+        }
+
+        private sealed class SeedUserOptions
+        {
+            public string Email { get; set; } = string.Empty;
+            public string FullName { get; set; } = string.Empty;
+            public string Role { get; set; } = Roles.Staff;
+            public string Password { get; set; } = string.Empty;
+            public string Phone { get; set; } = string.Empty;
         }
     }
 }
